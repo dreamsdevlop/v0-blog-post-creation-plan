@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Save, ExternalLink, CheckCircle } from 'lucide-react'
+import { Save, ExternalLink, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
+  const [bloggerStatus, setBloggerStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [settings, setSettings] = useState({
     blogName: 'Dark Chronicles',
     blogDescription: 'History, Mystery & Hidden Truths',
@@ -25,6 +26,14 @@ export default function SettingsPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
+
+  // Check Blogger connection status
+  useEffect(() => {
+    fetch('/api/publish-blogger')
+      .then(res => res.json())
+      .then(data => setBloggerStatus(data.connected ? 'connected' : 'disconnected'))
+      .catch(() => setBloggerStatus('disconnected'))
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -41,6 +50,59 @@ export default function SettingsPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Google Blogger</CardTitle>
+            <CardDescription>Connect to publish posts directly to your Blogger blog</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+              <div>
+                <p className="font-medium">Connection Status</p>
+                <p className="text-sm text-muted-foreground">
+                  {bloggerStatus === 'connected' 
+                    ? 'Your Blogger account is connected' 
+                    : 'Connect to publish posts to Blogger'}
+                </p>
+              </div>
+              {bloggerStatus === 'loading' ? (
+                <Badge variant="secondary">
+                  <Loader2 className="size-3 mr-1 animate-spin" />
+                  Checking
+                </Badge>
+              ) : bloggerStatus === 'connected' ? (
+                <Badge variant="default">
+                  <CheckCircle className="size-3 mr-1" />
+                  Connected
+                </Badge>
+              ) : (
+                <Badge variant="destructive">
+                  <XCircle className="size-3 mr-1" />
+                  Not Connected
+                </Badge>
+              )}
+            </div>
+
+            {bloggerStatus !== 'connected' && (
+              <Button asChild className="w-full bg-orange-600 hover:bg-orange-700">
+                <a href="/api/auth/blogger">
+                  <ExternalLink data-icon="inline-start" />
+                  Connect Google Blogger
+                </a>
+              </Button>
+            )}
+
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p><strong>Required Environment Variables:</strong></p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>GOOGLE_CLIENT_ID</li>
+                <li>GOOGLE_CLIENT_SECRET</li>
+                <li>BLOGGER_BLOG_ID</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Blog Settings</CardTitle>

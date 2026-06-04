@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Sparkles, Loader2, Copy, Check, Image as ImageIcon, RefreshCw, Wand2 } from 'lucide-react'
+import { Sparkles, Loader2, Copy, Check, Image as ImageIcon, RefreshCw, Wand2, ExternalLink } from 'lucide-react'
 import type { GenerationSettings } from '@/lib/types'
 
 const models = [
@@ -59,6 +59,9 @@ export function ContentGenerator() {
   const [copied, setCopied] = useState(false)
   const [autoGenerateImage, setAutoGenerateImage] = useState(true)
   const [selectedImageStyle, setSelectedImageStyle] = useState('auto')
+  const [isPublishingToBlogger, setIsPublishingToBlogger] = useState(false)
+  const [bloggerConnected, setBloggerConnected] = useState(false)
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   
   const [settings, setSettings] = useState<GenerationSettings>({
     model: 'deepseek',
@@ -203,6 +206,47 @@ export function ContentGenerator() {
       setTranscript('')
       setVideoTitle('')
       setVideoUrl('')
+      setPublishedUrl(null)
+    }
+  }
+
+  const handlePublishToBlogger = async (isDraft = false) => {
+    if (!generatedContent) return
+    
+    setIsPublishingToBlogger(true)
+    setPublishedUrl(null)
+    
+    try {
+      const response = await fetch('/api/publish-blogger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: generatedContent.title,
+          content: generatedContent.content,
+          tags: generatedContent.tags,
+          featuredImageUrl: generatedImage?.imageUrl,
+          videoUrl: videoUrl || undefined,
+          isDraft,
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Not connected - redirect to auth
+          window.location.href = '/api/auth/blogger'
+          return
+        }
+        throw new Error(result.error || 'Failed to publish')
+      }
+      
+      setPublishedUrl(result.postUrl)
+    } catch (error) {
+      console.error('Blogger publish error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to publish to Blogger')
+    } finally {
+      setIsPublishingToBlogger(false)
     }
   }
 
@@ -527,21 +571,60 @@ export function ContentGenerator() {
                   dangerouslySetInnerHTML={{ __html: generatedContent.content }}
                 />
 
-                <div className="flex gap-2">
-                  <Button onClick={handlePublishNow} className="flex-1">
-                    <Sparkles data-icon="inline-start" />
-                    Publish Now
-                  </Button>
-                  <Button variant="outline" onClick={handleSaveAsDraft}>
-                    Save Draft
-                  </Button>
-                  <Button variant="ghost" onClick={() => {
-                    setGeneratedContent(null)
-                    setGeneratedImage(null)
-                    setImageOptions([])
-                  }}>
-                    Discard
-                  </Button>
+                <div className="flex flex-col gap-3">
+                  {publishedUrl && (
+                    <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-3">
+                      <p className="text-sm text-green-400 font-medium">Published to Blogger!</p>
+                      <a 
+                        href={publishedUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-green-300 hover:underline flex items-center gap-1"
+                      >
+                        View Post <ExternalLink className="size-3" />
+                      </a>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => handlePublishToBlogger(false)} 
+                      className="flex-1 bg-orange-600 hover:bg-orange-700"
+                      disabled={isPublishingToBlogger}
+                    >
+                      {isPublishingToBlogger ? (
+                        <Loader2 className="animate-spin" data-icon="inline-start" />
+                      ) : (
+                        <ExternalLink data-icon="inline-start" />
+                      )}
+                      Publish to Blogger
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handlePublishToBlogger(true)}
+                      disabled={isPublishingToBlogger}
+                    >
+                      Draft
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button onClick={handlePublishNow} variant="secondary" className="flex-1">
+                      <Sparkles data-icon="inline-start" />
+                      Save Locally
+                    </Button>
+                    <Button variant="outline" onClick={handleSaveAsDraft}>
+                      Save Draft
+                    </Button>
+                    <Button variant="ghost" onClick={() => {
+                      setGeneratedContent(null)
+                      setGeneratedImage(null)
+                      setImageOptions([])
+                      setPublishedUrl(null)
+                    }}>
+                      Discard
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
