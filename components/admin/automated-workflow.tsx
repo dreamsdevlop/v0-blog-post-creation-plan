@@ -1,0 +1,348 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Play, 
+  Pause, 
+  CheckCircle2, 
+  Circle, 
+  Loader2, 
+  AlertCircle,
+  Zap,
+  Clock,
+  BarChart3
+} from 'lucide-react'
+
+interface AutomationStep {
+  id: string
+  name: string
+  status: 'pending' | 'running' | 'completed' | 'error'
+  message?: string
+}
+
+interface AutomationJob {
+  id: string
+  videoTitle: string
+  status: 'queued' | 'processing' | 'completed' | 'failed'
+  steps: AutomationStep[]
+  createdAt: string
+  completedAt?: string
+  postId?: string
+}
+
+export function AutomatedWorkflow() {
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [channelUrl, setChannelUrl] = useState('')
+  const [jobs, setJobs] = useState<AutomationJob[]>([])
+  const [stats, setStats] = useState({
+    totalProcessed: 0,
+    successRate: 100,
+    avgProcessingTime: '3.2 min',
+    postsThisWeek: 0
+  })
+
+  // Simulated automation steps
+  const automationSteps = [
+    { id: 'fetch', name: 'Fetch New Videos' },
+    { id: 'transcript', name: 'Get Transcript' },
+    { id: 'content', name: 'Generate Content' },
+    { id: 'image', name: 'Generate Image' },
+    { id: 'seo', name: 'Optimize SEO' },
+    { id: 'publish', name: 'Publish Post' },
+  ]
+
+  const runAutomation = async (videoTitle: string, videoUrl?: string) => {
+    const jobId = Date.now().toString()
+    const newJob: AutomationJob = {
+      id: jobId,
+      videoTitle,
+      status: 'processing',
+      steps: automationSteps.map(s => ({ ...s, status: 'pending' as const })),
+      createdAt: new Date().toISOString()
+    }
+    
+    setJobs(prev => [newJob, ...prev])
+
+    // Simulate step-by-step processing
+    for (let i = 0; i < automationSteps.length; i++) {
+      // Update current step to running
+      setJobs(prev => prev.map(job => 
+        job.id === jobId 
+          ? {
+              ...job,
+              steps: job.steps.map((step, idx) => 
+                idx === i ? { ...step, status: 'running' as const } : step
+              )
+            }
+          : job
+      ))
+
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000))
+
+      // Mark step as completed
+      setJobs(prev => prev.map(job => 
+        job.id === jobId 
+          ? {
+              ...job,
+              steps: job.steps.map((step, idx) => 
+                idx === i ? { ...step, status: 'completed' as const } : step
+              )
+            }
+          : job
+      ))
+    }
+
+    // Mark job as completed
+    setJobs(prev => prev.map(job => 
+      job.id === jobId 
+        ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
+        : job
+    ))
+
+    setStats(prev => ({
+      ...prev,
+      totalProcessed: prev.totalProcessed + 1,
+      postsThisWeek: prev.postsThisWeek + 1
+    }))
+  }
+
+  const getStepIcon = (status: AutomationStep['status']) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle2 className="size-4 text-green-500" />
+      case 'running':
+        return <Loader2 className="size-4 text-primary animate-spin" />
+      case 'error':
+        return <AlertCircle className="size-4 text-destructive" />
+      default:
+        return <Circle className="size-4 text-muted-foreground" />
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Automation Control Panel */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="size-5 text-primary" />
+                Automated Workflow
+              </CardTitle>
+              <CardDescription>
+                Fully automated video-to-blog pipeline with AI content and image generation
+              </CardDescription>
+            </div>
+            <Button
+              variant={isEnabled ? 'destructive' : 'default'}
+              onClick={() => setIsEnabled(!isEnabled)}
+            >
+              {isEnabled ? (
+                <>
+                  <Pause data-icon="inline-start" />
+                  Stop Automation
+                </>
+              ) : (
+                <>
+                  <Play data-icon="inline-start" />
+                  Start Automation
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="YouTube Channel URL or RSS Feed"
+                value={channelUrl}
+                onChange={(e) => setChannelUrl(e.target.value)}
+              />
+            </div>
+            <Button 
+              variant="outline"
+              onClick={() => runAutomation('Sample Video: The Dark History of...', channelUrl)}
+            >
+              Test Run
+            </Button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-4 pt-4">
+            <div className="rounded-lg border border-border p-3 text-center">
+              <p className="text-2xl font-bold text-primary">{stats.totalProcessed}</p>
+              <p className="text-xs text-muted-foreground">Posts Generated</p>
+            </div>
+            <div className="rounded-lg border border-border p-3 text-center">
+              <p className="text-2xl font-bold text-green-500">{stats.successRate}%</p>
+              <p className="text-xs text-muted-foreground">Success Rate</p>
+            </div>
+            <div className="rounded-lg border border-border p-3 text-center">
+              <p className="text-2xl font-bold">{stats.avgProcessingTime}</p>
+              <p className="text-xs text-muted-foreground">Avg. Time</p>
+            </div>
+            <div className="rounded-lg border border-border p-3 text-center">
+              <p className="text-2xl font-bold">{stats.postsThisWeek}</p>
+              <p className="text-xs text-muted-foreground">This Week</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Workflow Pipeline Visualization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pipeline Steps</CardTitle>
+          <CardDescription>Each video goes through these automated steps</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            {automationSteps.map((step, idx) => (
+              <div key={step.id} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary">
+                    <span className="text-xs font-bold text-primary">{idx + 1}</span>
+                  </div>
+                  <p className="text-xs mt-2 text-center max-w-16">{step.name}</p>
+                </div>
+                {idx < automationSteps.length - 1 && (
+                  <div className="h-0.5 w-8 bg-primary/30 mx-2" />
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Jobs */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Processing Queue</CardTitle>
+              <CardDescription>Current and recent automation jobs</CardDescription>
+            </div>
+            <Badge variant="secondary">
+              {jobs.filter(j => j.status === 'processing').length} Active
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {jobs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Clock className="size-8 mx-auto mb-2" />
+              <p className="text-sm">No jobs yet. Start automation or run a test.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {jobs.slice(0, 5).map((job) => (
+                <div key={job.id} className="rounded-lg border border-border p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-medium text-sm">{job.videoTitle}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Started: {new Date(job.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Badge variant={
+                      job.status === 'completed' ? 'default' :
+                      job.status === 'processing' ? 'secondary' :
+                      job.status === 'failed' ? 'destructive' : 'outline'
+                    }>
+                      {job.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {job.steps.map((step, idx) => (
+                      <div key={step.id} className="flex items-center">
+                        <div className="flex items-center gap-1">
+                          {getStepIcon(step.status)}
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
+                            {step.name}
+                          </span>
+                        </div>
+                        {idx < job.steps.length - 1 && (
+                          <div className={`h-0.5 w-4 mx-1 ${
+                            step.status === 'completed' ? 'bg-green-500' : 'bg-muted'
+                          }`} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Workflow Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Automation Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Check Interval</label>
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="15">Every 15 minutes</option>
+                <option value="30">Every 30 minutes</option>
+                <option value="60" selected>Every hour</option>
+                <option value="360">Every 6 hours</option>
+                <option value="1440">Once daily</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Auto-Publish</label>
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="draft">Save as Draft</option>
+                <option value="publish" selected>Publish Immediately</option>
+                <option value="schedule">Schedule for Best Time</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Content Model</label>
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="deepseek" selected>DeepSeek 4 Pro Flash</option>
+                <option value="kimi">Kimi K2.6</option>
+                <option value="glm">GLM 5.1</option>
+                <option value="stepfun">StepFun 3.7 Flash</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Image Style</label>
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="auto" selected>AI Decides</option>
+                <option value="cinematic">Cinematic</option>
+                <option value="dark_artistic">Dark Artistic</option>
+                <option value="noir_mystery">Noir Mystery</option>
+                <option value="historical_realistic">Historical</option>
+              </select>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Daily Post Limit</span>
+            <Input type="number" defaultValue={5} className="w-20 text-center" />
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Minimum Video Duration</span>
+            <Input type="number" defaultValue={5} className="w-20 text-center" placeholder="min" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

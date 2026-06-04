@@ -11,6 +11,7 @@ import {
   Sparkles,
   BarChart3,
   BookOpen,
+  Zap,
 } from 'lucide-react'
 
 const navigation = [
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Posts', href: '/admin/posts', icon: FileText },
   { name: 'Videos', href: '/admin/videos', icon: Video },
   { name: 'Generate', href: '/admin/generate', icon: Sparkles },
+  { name: 'Automation', href: '/admin/automation', icon: Zap },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]

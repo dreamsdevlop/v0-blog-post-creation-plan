@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Sparkles, Loader2, Copy, Check } from 'lucide-react'
+import { Sparkles, Loader2, Copy, Check, Image as ImageIcon, RefreshCw, Wand2 } from 'lucide-react'
 import type { GenerationSettings } from '@/lib/types'
 
 const models = [
@@ -24,11 +24,20 @@ const tones = [
   { id: 'storytelling', name: 'Storytelling', description: 'Narrative-driven' },
 ] as const
 
+const imageStyles = [
+  { id: 'auto', name: 'AI Decides', description: 'Best style based on content' },
+  { id: 'cinematic', name: 'Cinematic', description: 'Epic movie-like scenes' },
+  { id: 'dark_artistic', name: 'Dark Artistic', description: 'Moody illustrations' },
+  { id: 'noir_mystery', name: 'Noir Mystery', description: 'High contrast shadows' },
+  { id: 'historical_realistic', name: 'Historical', description: 'Authentic period style' },
+] as const
+
 export function ContentGenerator() {
   const [videoUrl, setVideoUrl] = useState('')
   const [transcript, setTranscript] = useState('')
   const [videoTitle, setVideoTitle] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const [generatedContent, setGeneratedContent] = useState<{
     title: string
     content: string
@@ -37,7 +46,19 @@ export function ContentGenerator() {
     seoDescription: string
     tags: string[]
   } | null>(null)
+  const [generatedImage, setGeneratedImage] = useState<{
+    imageUrl: string
+    style: string
+    prompt: string
+  } | null>(null)
+  const [imageOptions, setImageOptions] = useState<Array<{
+    imageUrl: string
+    style: string
+    prompt: string
+  }>>([])
   const [copied, setCopied] = useState(false)
+  const [autoGenerateImage, setAutoGenerateImage] = useState(true)
+  const [selectedImageStyle, setSelectedImageStyle] = useState('auto')
   
   const [settings, setSettings] = useState<GenerationSettings>({
     model: 'deepseek',
@@ -47,10 +68,47 @@ export function ContentGenerator() {
     addAffiliateLinks: false,
   })
 
+  const handleGenerateImage = async (title: string, content: string, generateMultiple = false) => {
+    setIsGeneratingImage(true)
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title, 
+          content: content.slice(0, 500), 
+          style: selectedImageStyle,
+          generateMultiple 
+        }),
+      })
+      
+      if (!response.ok) throw new Error('Image generation failed')
+      
+      const result = await response.json()
+      
+      if (generateMultiple && result.images) {
+        setImageOptions(result.images)
+        if (result.images.length > 0) {
+          setGeneratedImage(result.images[0])
+        }
+      } else {
+        setGeneratedImage(result)
+        setImageOptions([])
+      }
+    } catch (error) {
+      console.error('Image generation error:', error)
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }
+
   const handleGenerate = async () => {
     if (!transcript || !videoTitle) return
     
     setIsGenerating(true)
+    setGeneratedImage(null)
+    setImageOptions([])
+    
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -62,6 +120,11 @@ export function ContentGenerator() {
       
       const result = await response.json()
       setGeneratedContent(result)
+      
+      // Auto-generate image after content is ready
+      if (autoGenerateImage) {
+        await handleGenerateImage(result.title, result.content)
+      }
     } catch (error) {
       console.error('Generation error:', error)
     } finally {
@@ -89,7 +152,7 @@ export function ContentGenerator() {
         slug: generatedContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50),
         content: generatedContent.content,
         excerpt: generatedContent.excerpt,
-        thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
+        thumbnail: generatedImage?.imageUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
         publishedAt: new Date().toISOString(),
         status: 'draft',
         seoTitle: generatedContent.seoTitle,
@@ -102,6 +165,41 @@ export function ContentGenerator() {
     
     if (response.ok) {
       setGeneratedContent(null)
+      setGeneratedImage(null)
+      setImageOptions([])
+      setTranscript('')
+      setVideoTitle('')
+      setVideoUrl('')
+    }
+  }
+
+  const handlePublishNow = async () => {
+    if (!generatedContent) return
+    
+    const response = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoId: videoUrl || 'manual',
+        title: generatedContent.title,
+        slug: generatedContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50),
+        content: generatedContent.content,
+        excerpt: generatedContent.excerpt,
+        thumbnail: generatedImage?.imageUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
+        publishedAt: new Date().toISOString(),
+        status: 'published',
+        seoTitle: generatedContent.seoTitle,
+        seoDescription: generatedContent.seoDescription,
+        tags: generatedContent.tags,
+        views: 0,
+        aiModel: settings.model,
+      }),
+    })
+    
+    if (response.ok) {
+      setGeneratedContent(null)
+      setGeneratedImage(null)
+      setImageOptions([])
       setTranscript('')
       setVideoTitle('')
       setVideoUrl('')
@@ -114,7 +212,7 @@ export function ContentGenerator() {
         <CardHeader>
           <CardTitle>Content Generator</CardTitle>
           <CardDescription>
-            Transform video transcripts into engaging blog posts using AI
+            Transform video transcripts into engaging blog posts with AI-generated images
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -147,9 +245,10 @@ export function ContentGenerator() {
           </div>
 
           <Tabs defaultValue="model" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="model">AI Model</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="model">Model</TabsTrigger>
               <TabsTrigger value="tone">Tone</TabsTrigger>
+              <TabsTrigger value="image">Image</TabsTrigger>
               <TabsTrigger value="options">Options</TabsTrigger>
             </TabsList>
             
@@ -195,6 +294,42 @@ export function ContentGenerator() {
                   )}
                 </div>
               ))}
+            </TabsContent>
+
+            <TabsContent value="image" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Auto-Generate Featured Image</p>
+                  <p className="text-xs text-muted-foreground">Create image automatically with content</p>
+                </div>
+                <Button
+                  variant={autoGenerateImage ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAutoGenerateImage(!autoGenerateImage)}
+                >
+                  {autoGenerateImage ? 'On' : 'Off'}
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Image Style</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {imageStyles.map((style) => (
+                    <div
+                      key={style.id}
+                      className={`rounded-lg border p-2 cursor-pointer transition-colors ${
+                        selectedImageStyle === style.id
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      onClick={() => setSelectedImageStyle(style.id)}
+                    >
+                      <p className="font-medium text-xs">{style.name}</p>
+                      <p className="text-xs text-muted-foreground">{style.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="options" className="space-y-4 mt-4">
@@ -252,78 +387,174 @@ export function ContentGenerator() {
             {isGenerating ? (
               <>
                 <Loader2 className="animate-spin" data-icon="inline-start" />
-                Generating...
+                Generating Content & Image...
               </>
             ) : (
               <>
-                <Sparkles data-icon="inline-start" />
-                Generate Blog Post
+                <Wand2 data-icon="inline-start" />
+                Generate Complete Blog Post
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Generated Content</CardTitle>
-            <CardDescription>Preview and edit your blog post</CardDescription>
-          </div>
-          {generatedContent && (
-            <div className="flex gap-2">
+      <div className="space-y-6">
+        {/* Featured Image Preview */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-base">Featured Image</CardTitle>
+              <CardDescription>AI-generated thumbnail for your post</CardDescription>
+            </div>
+            {generatedContent && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleGenerateImage(generatedContent.title, generatedContent.content, true)}
+                  disabled={isGeneratingImage}
+                >
+                  {isGeneratingImage ? (
+                    <Loader2 className="animate-spin size-4" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {isGeneratingImage ? (
+              <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="size-8 animate-spin mx-auto mb-2 text-primary" />
+                  <p className="text-sm text-muted-foreground">Generating image...</p>
+                </div>
+              </div>
+            ) : generatedImage ? (
+              <div className="space-y-3">
+                <div className="aspect-video rounded-lg overflow-hidden border border-border">
+                  <img 
+                    src={generatedImage.imageUrl} 
+                    alt="Generated thumbnail"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary">{generatedImage.style}</Badge>
+                  <p className="text-xs text-muted-foreground truncate max-w-48" title={generatedImage.prompt}>
+                    {generatedImage.prompt.slice(0, 40)}...
+                  </p>
+                </div>
+                
+                {/* Image Options */}
+                {imageOptions.length > 1 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium">Alternative Styles:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {imageOptions.map((option, idx) => (
+                        <div
+                          key={idx}
+                          className={`aspect-video rounded-lg overflow-hidden border cursor-pointer transition-all ${
+                            generatedImage.imageUrl === option.imageUrl 
+                              ? 'border-primary ring-2 ring-primary/20' 
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => setGeneratedImage(option)}
+                        >
+                          <img 
+                            src={option.imageUrl} 
+                            alt={`Style: ${option.style}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
+                <div className="text-center">
+                  <ImageIcon className="size-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Image will appear here after generation
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Generated Content */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-base">Generated Content</CardTitle>
+              <CardDescription>Preview and edit your blog post</CardDescription>
+            </div>
+            {generatedContent && (
               <Button variant="outline" size="sm" onClick={handleCopy}>
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
               </Button>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {generatedContent ? (
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg">{generatedContent.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{generatedContent.excerpt}</p>
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                {generatedContent.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">{tag}</Badge>
-                ))}
-              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {generatedContent ? (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg">{generatedContent.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{generatedContent.excerpt}</p>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {generatedContent.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary">{tag}</Badge>
+                  ))}
+                </div>
 
-              <div className="border-t border-border pt-4">
-                <h4 className="text-sm font-medium mb-2">SEO Preview</h4>
-                <div className="rounded-lg bg-muted p-3">
-                  <p className="text-sm font-medium text-primary">{generatedContent.seoTitle}</p>
-                  <p className="text-xs text-muted-foreground">{generatedContent.seoDescription}</p>
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-sm font-medium mb-2">SEO Preview</h4>
+                  <div className="rounded-lg bg-muted p-3">
+                    <p className="text-sm font-medium text-primary">{generatedContent.seoTitle}</p>
+                    <p className="text-xs text-muted-foreground">{generatedContent.seoDescription}</p>
+                  </div>
+                </div>
+
+                <div
+                  className="prose prose-sm prose-invert max-h-48 overflow-y-auto rounded-lg border border-border p-4"
+                  dangerouslySetInnerHTML={{ __html: generatedContent.content }}
+                />
+
+                <div className="flex gap-2">
+                  <Button onClick={handlePublishNow} className="flex-1">
+                    <Sparkles data-icon="inline-start" />
+                    Publish Now
+                  </Button>
+                  <Button variant="outline" onClick={handleSaveAsDraft}>
+                    Save Draft
+                  </Button>
+                  <Button variant="ghost" onClick={() => {
+                    setGeneratedContent(null)
+                    setGeneratedImage(null)
+                    setImageOptions([])
+                  }}>
+                    Discard
+                  </Button>
                 </div>
               </div>
-
-              <div
-                className="prose prose-sm prose-invert max-h-64 overflow-y-auto rounded-lg border border-border p-4"
-                dangerouslySetInnerHTML={{ __html: generatedContent.content }}
-              />
-
-              <div className="flex gap-2">
-                <Button onClick={handleSaveAsDraft} className="flex-1">
-                  Save as Draft
-                </Button>
-                <Button variant="outline" onClick={() => setGeneratedContent(null)}>
-                  Discard
-                </Button>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Sparkles className="size-8 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Enter a transcript and click Generate
+                </p>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Sparkles className="size-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                Enter a transcript and click Generate to create your blog post
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
