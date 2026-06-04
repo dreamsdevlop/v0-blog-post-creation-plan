@@ -10,8 +10,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Dark Chronicles - History, Mystery & Hidden Truths',
+  description: 'Automated blog revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',
   generator: 'v0.app',
   icons: {
     icon: [
