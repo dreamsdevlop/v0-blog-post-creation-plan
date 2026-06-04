@@ -13,6 +13,27 @@ export const metadata: Metadata = {
   title: 'Dark Chronicles - History, Mystery & Hidden Truths',
   description: 'Automated blog revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',
   generator: 'v0.app',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://darkchronicles.vercel.app'),
+  openGraph: {
+    title: 'Dark Chronicles - History, Mystery & Hidden Truths',
+    description: 'Revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Dark Chronicles',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Dark Chronicles - History, Mystery & Hidden Truths',
+    description: 'Revealing the dark secrets of history, mysterious cults, and hidden truths.',
+  },
+  alternates: {
+    types: {
+      'application/rss+xml': '/feed.xml',
+    },
+  },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+  },
   icons: {
     icon: [
       {
