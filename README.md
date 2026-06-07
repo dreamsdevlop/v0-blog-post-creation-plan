@@ -10,7 +10,7 @@ A fully automated blog platform that transforms YouTube video transcripts into S
 - **Blogger Publishing** - Auto-publish posts directly to your Blogger blog
 - **Automation Pipeline** - Fully automated video-to-blog workflow with monitoring
 - **Analytics Dashboard** - Track views, posts, and performance metrics
-- **Persistent Storage** - All data saved to local JSON files
+- **Persistent Storage** - File-based storage with Neon PostgreSQL support
 
 ## Getting Started
 
@@ -22,29 +22,21 @@ npm install
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the root directory:
+Copy `.env.example` to `.env.local` and fill in your values:
 
-```env
-# Required for AI content generation
-NVIDIA_API_KEY_1=your_nvidia_api_key_1
-NVIDIA_API_KEY_2=your_nvidia_api_key_2
-NVIDIA_API_KEY_3=your_nvidia_api_key_3
-NVIDIA_API_KEY_4=your_nvidia_api_key_4
-
-# Required for image generation
-NVIDIA_IMAGE_API_KEY=your_nvidia_image_api_key
-
-# Required for YouTube integration
-YOUTUBE_API_KEY=your_youtube_api_key
-
-# Required for Blogger publishing
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-BLOGGER_BLOG_ID=your_blogger_blog_id
-
-# Site URL (for OAuth callbacks)
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```bash
+cp .env.example .env.local
 ```
+
+Required variables:
+- `NEXT_PUBLIC_SITE_URL` - Your site URL
+- `NVIDIA_API_KEY_1` through `NVIDIA_API_KEY_4` - NVIDIA AI API keys
+- `NVIDIA_IMAGE_API_KEY` - NVIDIA Image API key
+- `YOUTUBE_API_KEY` - YouTube Data API key
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+- `BLOGGER_BLOG_ID` - Your Blogger blog ID
+- `DATABASE_URL` - Neon PostgreSQL connection string (optional, falls back to file storage)
 
 ### 3. Initialize Data
 
@@ -63,6 +55,46 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) to see the blog.
 
 Open [http://localhost:3000/admin](http://localhost:3000/admin) to access the admin panel.
+
+## Deploy to Vercel with Neon Database
+
+### Step 1: Create Neon Database
+
+1. Go to [console.neon.tech](https://console.neon.tech)
+2. Create a new project
+3. Copy the connection string (it looks like: `postgresql://user:password@host/dbname?sslmode=require`)
+
+### Step 2: Deploy to Vercel
+
+1. Push your code to GitHub
+2. Go to [vercel.com/new](https://vercel.com/new)
+3. Import your repository
+4. Add environment variables in Vercel project settings:
+   - `DATABASE_URL` - Your Neon connection string
+   - `NEXT_PUBLIC_SITE_URL` - Your Vercel app URL
+   - All other required API keys
+5. Click **Deploy**
+
+### Step 3: Initialize Database
+
+After first deploy, trigger a serverless function to initialize tables:
+
+```bash
+curl https://your-app.vercel.app/api/stats
+```
+
+Or visit any admin page - the database initializes automatically on first request.
+
+## Database Schema
+
+The app uses these tables when `DATABASE_URL` is configured:
+
+- `posts` - Blog posts
+- `videos` - Imported YouTube videos
+- `channel_config` - YouTube channel configuration
+- `settings` - App settings
+
+When `DATABASE_URL` is not set, the app falls back to file-based storage in the `data/` directory.
 
 ## Project Structure
 
@@ -103,6 +135,8 @@ lib/
 ├── nvidia-ai.ts             # NVIDIA AI integration
 ├── nvidia-image.ts          # NVIDIA image generation
 ├── storage.ts               # File-based persistent storage
+├── neon.ts                  # Neon database connection
+├── db.ts                    # PostgreSQL database operations
 ├── types.ts                 # TypeScript types
 └── youtube.ts               # YouTube API integration
 ```
@@ -132,6 +166,7 @@ The platform is designed for monetization through:
 - **NVIDIA AI** - Content and image generation
 - **Blogger API** - Blog publishing
 - **YouTube Data API** - Video metadata and transcripts
+- **Neon PostgreSQL** - Production database
 - **SWR** - Data fetching and caching
 
 ## Scripts
