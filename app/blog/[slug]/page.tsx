@@ -13,7 +13,8 @@ async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
   if (!res.ok) return null
   const data = await res.json()
-  return data.posts?.find((post: BlogPost) => post.slug === slug && post.status === 'published') || null
+  const posts: BlogPost[] = Array.isArray(data) ? data : []
+  return posts.find((post: BlogPost) => post.slug === slug && post.status === 'published') || null
 }
 
 async function getPublishedPosts(): Promise<BlogPost[]> {
@@ -21,9 +22,10 @@ async function getPublishedPosts(): Promise<BlogPost[]> {
   const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
   if (!res.ok) return []
   const data = await res.json()
-  return data.posts?.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
+  const posts: BlogPost[] = Array.isArray(data) ? data : []
+  return posts.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  ) || []
+  )
 }
 
 export async function generateMetadata({ 

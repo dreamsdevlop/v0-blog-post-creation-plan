@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import useSWR from 'swr'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Video, Link as LinkIcon, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
+const fetcher = (url: string) => fetch(url).then(res => res.json())
+
 export default function VideosPage() {
+  const { data: videosData, mutate: mutateVideos } = useSWR<{ videos: Array<{ id: string; title: string; thumbnail: string }> }>('/api/videos', fetcher)
   const [channelUrl, setChannelUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [isConnected, setIsConnected] = useState(false)
@@ -22,6 +26,19 @@ export default function VideosPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (videosData?.videos) {
+      setImportedVideos(
+        videosData.videos.map(v => ({
+          id: v.id,
+          title: v.title,
+          thumbnail: v.thumbnail,
+          status: 'processed' as const,
+        }))
+      )
+    }
+  }, [videosData])
 
   const handleConnect = async () => {
     if (!channelUrl) return
@@ -118,6 +135,7 @@ export default function VideosPage() {
           ...prev,
         ])
       }
+      mutateVideos()
     } catch (error) {
       setImportError(error instanceof Error ? error.message : 'Failed to sync channel')
     } finally {

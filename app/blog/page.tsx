@@ -9,9 +9,10 @@ async function getPublishedPosts(): Promise<BlogPost[]> {
   const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
   if (!res.ok) return []
   const data = await res.json()
-  return data.posts?.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
+  const posts: BlogPost[] = Array.isArray(data) ? data : []
+  return posts.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  ) || []
+  )
 }
 
 export default async function BlogPage() {
