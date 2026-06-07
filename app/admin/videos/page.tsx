@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Video, Link as LinkIcon, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
+import { Video, Link as LinkIcon, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function VideosPage() {
   const [channelUrl, setChannelUrl] = useState('')
@@ -17,39 +17,111 @@ export default function VideosPage() {
     title: string
     thumbnail: string
     status: 'pending' | 'processed' | 'error'
-  }>>([
-    {
-      id: '1',
-      title: 'What Really Happened at Dyatlov Pass?',
-      thumbnail: 'https://images.unsplash.com/photo-1478827536114-da961b7f86d2?w=400',
-      status: 'processed',
-    },
-    {
-      id: '2',
-      title: 'The Curse of the Hope Diamond',
-      thumbnail: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400',
-      status: 'pending',
-    },
-  ])
+    error?: string
+  }>>([])
+  const [isImporting, setIsImporting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
 
-  const handleConnect = () => {
-    if (channelUrl) {
-      setIsConnected(true)
+  const handleConnect = async () => {
+    if (!channelUrl) return
+    setIsConnected(true)
+  }
+
+  const handleImport = async () => {
+    if (!videoUrl) return
+
+    setIsImporting(true)
+    setImportError(null)
+
+    const tempId = crypto.randomUUID()
+    setImportedVideos(prev => [
+      {
+        id: tempId,
+        title: 'Importing...',
+        thumbnail: '',
+        status: 'pending',
+      },
+      ...prev,
+    ])
+
+    try {
+      const response = await fetch('/api/videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUrl }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to import video')
+      }
+
+      setImportedVideos(prev =>
+        prev.map(video =>
+          video.id === tempId
+            ? {
+                id: data.video.id,
+                title: data.video.title,
+                thumbnail: data.video.thumbnail,
+                status: 'processed' as const,
+              }
+            : video
+        )
+      )
+      setVideoUrl('')
+    } catch (error) {
+      setImportedVideos(prev =>
+        prev.map(video =>
+          video.id === tempId
+            ? {
+                ...video,
+                status: 'error' as const,
+                error: error instanceof Error ? error.message : 'Import failed',
+                title: 'Import failed',
+              }
+            : video
+        )
+      )
+      setImportError(error instanceof Error ? error.message : 'Failed to import video')
+    } finally {
+      setIsImporting(false)
     }
   }
 
-  const handleImport = () => {
-    if (videoUrl) {
-      setImportedVideos([
-        {
-          id: Date.now().toString(),
-          title: 'New Video from URL',
-          thumbnail: 'https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=400',
-          status: 'pending',
-        },
-        ...importedVideos,
-      ])
-      setVideoUrl('')
+  const handleSync = async () => {
+    setIsSyncing(true)
+    setImportError(null)
+
+    try {
+      const response = await fetch('/api/videos/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelUrl }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync channel')
+      }
+
+      if (data.videos && data.videos.length > 0) {
+        setImportedVideos(prev => [
+          ...data.videos.map((v: { id: string; title: string; thumbnail: string }) => ({
+            id: v.id,
+            title: v.title,
+            thumbnail: v.thumbnail,
+            status: 'processed' as const,
+          })),
+          ...prev,
+        ])
+      }
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Failed to sync channel')
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -59,6 +131,13 @@ export default function VideosPage() {
         <h1 className="text-3xl font-bold">Videos</h1>
         <p className="text-muted-foreground">Import and manage videos from your partner channel</p>
       </div>
+
+      {importError && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{importError}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -127,9 +206,9 @@ export default function VideosPage() {
               Videos ready to be transformed into blog posts
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm">
-            <RefreshCw data-icon="inline-start" />
-            Sync Now
+          <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing || !isConnected}>
+            <RefreshCw className={`size-4 ${isSyncing ? 'animate-spin' : ''}`} data-icon="inline-start" />
+            {isSyncing ? 'Syncing...' : 'Sync Now'}
           </Button>
         </CardHeader>
         <CardContent>
@@ -145,13 +224,22 @@ export default function VideosPage() {
                   key={video.id}
                   className="flex items-center gap-4 rounded-lg border border-border p-4"
                 >
-                  <img
-                    src={video.thumbnail}
-                    alt={video.title}
-                    className="size-16 rounded-lg object-cover"
-                  />
+                  {video.thumbnail ? (
+                    <img
+                      src={video.thumbnail}
+                      alt={video.title}
+                      className="size-16 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="size-16 rounded-lg bg-muted flex items-center justify-center">
+                      <Video className="size-6 text-muted-foreground" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium truncate">{video.title}</h3>
+                    {video.error && (
+                      <p className="text-xs text-destructive mt-1">{video.error}</p>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <Badge
                         variant={
@@ -168,13 +256,6 @@ export default function VideosPage() {
                       </Badge>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={video.status === 'processed'}
-                  >
-                    Generate Post
-                  </Button>
                 </div>
               ))}
             </div>
