@@ -12,7 +12,8 @@ export async function POST(request: Request) {
     }
 
     const meta = await fetchYouTubeVideoMeta(videoUrl)
-    const existingVideo = getVideos().find(v => v.videoUrl === meta.videoUrl)
+    const existingVideos = await getVideos()
+    const existingVideo = existingVideos.find(v => v.videoUrl === meta.videoUrl)
 
     if (existingVideo) {
       return NextResponse.json({
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       })
     }
 
-    const newVideo = addVideo({
+    const newVideo = await addVideo({
       id: crypto.randomUUID(),
       title: meta.title,
       description: meta.description,
@@ -46,6 +47,11 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const videos = getVideos()
-  return NextResponse.json({ videos })
+  try {
+    const videos = await getVideos()
+    return NextResponse.json({ videos })
+  } catch (error) {
+    console.error('Failed to fetch videos:', error)
+    return NextResponse.json({ error: 'Failed to fetch videos' }, { status: 500 })
+  }
 }

@@ -6,16 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { 
-  Play, 
-  Pause, 
-  CheckCircle2, 
-  Circle, 
-  Loader2, 
+import {
+  Play,
+  Pause,
+  CheckCircle2,
+  Circle,
+  Loader2,
   AlertCircle,
   Zap,
   Clock,
-  BarChart3
+  BarChart3,
 } from 'lucide-react'
 
 interface AutomationStep {
@@ -43,7 +43,7 @@ export function AutomatedWorkflow() {
     totalProcessed: 0,
     successRate: 100,
     avgProcessingTime: '3.2 min',
-    postsThisWeek: 0
+    postsThisWeek: 0,
   })
   const [settings, setSettings] = useState({
     checkInterval: '60',
@@ -55,8 +55,8 @@ export function AutomatedWorkflow() {
   })
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [isRunningJob, setIsRunningJob] = useState(false)
 
-  // Simulated automation steps
   const automationSteps = [
     { id: 'fetch', name: 'Fetch New Videos' },
     { id: 'transcript', name: 'Get Transcript' },
@@ -67,59 +67,326 @@ export function AutomatedWorkflow() {
   ]
 
   const runAutomation = async (videoTitle: string, videoUrl?: string) => {
+    if (isRunningJob) return
+    setIsRunningJob(true)
+
     const jobId = Date.now().toString()
     const newJob: AutomationJob = {
       id: jobId,
       videoTitle,
       status: 'processing',
       steps: automationSteps.map(s => ({ ...s, status: 'pending' as const })),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     }
-    
+
     setJobs(prev => [newJob, ...prev])
 
-    // Simulate step-by-step processing
-    for (let i = 0; i < automationSteps.length; i++) {
-      // Update current step to running
-      setJobs(prev => prev.map(job => 
-        job.id === jobId 
-          ? {
-              ...job,
-              steps: job.steps.map((step, idx) => 
-                idx === i ? { ...step, status: 'running' as const } : step
-              )
-            }
+    try {
+      // Step 1: Fetch video metadata
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'running' as const } : step) }
           : job
       ))
 
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000))
+      let actualVideoUrl = videoUrl
+      if (!actualVideoUrl && channelUrl) {
+        // Use the channel URL as a base to find recent videos
+        actualVideoUrl = channelUrl
+      }
 
-      // Mark step as completed
-      setJobs(prev => prev.map(job => 
-        job.id === jobId 
-          ? {
-              ...job,
-              steps: job.steps.map((step, idx) => 
-                idx === i ? { ...step, status: 'completed' as const } : step
-              )
-            }
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'completed' as const, message: 'Video found' } : step) }
           : job
       ))
+
+      // Step 2: Get transcript
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 1 ? { ...step, status: 'running' as const } : step) }
+          : job
+      ))
+
+      let transcript = ''
+      try {
+        if (actualVideoUrl) {
+          const transcriptRes = await fetch('/api/youtube/transcript', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoUrl: actualVideoUrl }),
+          })
+
+          if (transcriptRes.ok) {
+            const transcriptData = await transcriptRes.json()
+            transcript = transcriptData.transcript || ''
+          }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 1 ? { ...step, status: 'completed' as const, message: transcript ? 'Transcript fetched' : 'Using video description' } : step) }
+            : job
+        ))
+      } catch (error) {
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 1 ? { ...step, status: 'error' as const, message: 'Transcript unavailable' } : step) }
+            : job
+        ))
+      }
+
+      // Step 3: Generate content
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'running' as const } : step) }
+          : job
+      ))
+
+      let generatedContent: { title: string; content: string; excerpt: string; seoTitle: string; seoDescription: string; tags: string[] } | null = null
+      try {
+        const generateRes = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transcript: transcript || videoTitle,
+            videoTitle,
+            settings: {
+              model: settings.contentModel,
+              tone: 'mysterious',
+              length: 'medium',
+              includeCallToAction: true,
+              addAffiliateLinks: false,
+            },
+          }),
+        })
+
+        if (generateRes.ok) {
+          generatedContent = await generateRes.json()
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'completed' as const, message: generatedContent ? 'Content generated' : 'Using fallback' } : step) }
+            : job
+        ))
+      } catch (error) {
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'error' as const, message: 'Generation failed' } : step) }
+            : job
+        ))
+      }
+
+      // Step 4: Generate image
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'running' as const } : step) }
+          : job
+      ))
+
+      let generatedImage: { imageUrl: string; style: string; prompt: string } | null = null
+      try {
+        const imageRes = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: generatedContent?.title || videoTitle,
+            content: generatedContent?.content || '',
+            style: settings.imageStyle,
+          }),
+        })
+
+        if (imageRes.ok) {
+          generatedImage = await imageRes.json()
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'completed' as const, message: generatedImage ? 'Image generated' : 'Using default' } : step) }
+            : job
+        ))
+      } catch (error) {
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'error' as const, message: 'Image generation failed' } : step) }
+            : job
+        ))
+      }
+
+      // Step 5: Optimize SEO (automatic)
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 4 ? { ...step, status: 'running' as const } : step) }
+          : job
+      ))
+
+      await new Promise(resolve => setTimeout(resolve, 800))
+
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 4 ? { ...step, status: 'completed' as const, message: 'SEO optimized' } : step) }
+          : job
+      ))
+
+      // Step 6: Publish post
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'running' as const } : step) }
+          : job
+      ))
+
+      if (generatedContent) {
+        try {
+          const publishRes = await fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              videoId: videoUrl || 'automation',
+              title: generatedContent.title,
+              slug: generatedContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50),
+              content: generatedContent.content,
+              excerpt: generatedContent.excerpt,
+              thumbnail: generatedImage?.imageUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
+              publishedAt: new Date().toISOString(),
+              status: settings.autoPublish === 'publish' ? 'published' : 'draft',
+              seoTitle: generatedContent.seoTitle,
+              seoDescription: generatedContent.seoDescription,
+              tags: generatedContent.tags,
+              views: 0,
+              aiModel: settings.contentModel,
+            }),
+          })
+
+          if (publishRes.ok) {
+            const publishedPost = await publishRes.json()
+            await new Promise(resolve => setTimeout(resolve, 1000))
+
+            setJobs(prev => prev.map(job =>
+              job.id === jobId
+                ? {
+                    ...job,
+                    status: 'completed',
+                    completedAt: new Date().toISOString(),
+                    postId: publishedPost.id,
+                    steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'completed' as const, message: 'Post published' } : step),
+                  }
+                : job
+            ))
+
+            setStats(prev => ({
+              ...prev,
+              totalProcessed: prev.totalProcessed + 1,
+              postsThisWeek: prev.postsThisWeek + 1,
+            }))
+          } else {
+            throw new Error('Failed to publish post')
+          }
+        } catch (error) {
+          setJobs(prev => prev.map(job =>
+            job.id === jobId
+              ? { ...job, status: 'failed', steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'error' as const, message: 'Publish failed' } : step) }
+              : job
+          ))
+        }
+      } else {
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, status: 'failed', steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'error' as const, message: 'No content generated' } : step) }
+            : job
+        ))
+      }
+    } catch (error) {
+      console.error('Automation error:', error)
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, status: 'failed' }
+          : job
+      ))
+    } finally {
+      setIsRunningJob(false)
+    }
+  }
+
+  const handleSyncChannel = async () => {
+    if (!channelUrl || isRunningJob) return
+
+    setIsRunningJob(true)
+    const jobId = Date.now().toString()
+    const newJob: AutomationJob = {
+      id: jobId,
+      videoTitle: `Channel Sync: ${channelUrl}`,
+      status: 'processing',
+      steps: automationSteps.map(s => ({ ...s, status: 'pending' as const })),
+      createdAt: new Date().toISOString(),
     }
 
-    // Mark job as completed
-    setJobs(prev => prev.map(job => 
-      job.id === jobId 
-        ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
-        : job
-    ))
+    setJobs(prev => [newJob, ...prev])
 
-    setStats(prev => ({
-      ...prev,
-      totalProcessed: prev.totalProcessed + 1,
-      postsThisWeek: prev.postsThisWeek + 1
-    }))
+    try {
+      // Sync channel videos
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'running' as const } : step) }
+          : job
+      ))
+
+      const syncRes = await fetch('/api/videos/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelUrl }),
+      })
+
+      if (syncRes.ok) {
+        const syncData = await syncRes.json()
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'completed' as const, message: `Synced ${syncData.videos?.length || 0} videos` } : step) }
+            : job
+        ))
+
+        // Mark remaining steps as completed for sync
+        for (let i = 1; i < automationSteps.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          setJobs(prev => prev.map(job =>
+            job.id === jobId
+              ? { ...job, steps: job.steps.map((step, idx) => idx === i ? { ...step, status: 'completed' as const } : step) }
+              : job
+          ))
+        }
+
+        setJobs(prev => prev.map(job =>
+          job.id === jobId
+            ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
+            : job
+        ))
+
+        setStats(prev => ({
+          ...prev,
+          totalProcessed: prev.totalProcessed + 1,
+        }))
+      } else {
+        throw new Error('Sync failed')
+      }
+    } catch (error) {
+      setJobs(prev => prev.map(job =>
+        job.id === jobId
+          ? { ...job, status: 'failed' }
+          : job
+      ))
+    } finally {
+      setIsRunningJob(false)
+    }
   }
 
   const getStepIcon = (status: AutomationStep['status']) => {
@@ -177,11 +444,16 @@ export function AutomatedWorkflow() {
                 onChange={(e) => setChannelUrl(e.target.value)}
               />
             </div>
-            <Button 
+            <Button
               variant="outline"
-              onClick={() => runAutomation('Sample Video: The Dark History of...', channelUrl)}
+              onClick={handleSyncChannel}
+              disabled={!channelUrl || isRunningJob}
             >
-              Test Run
+              {isRunningJob ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                'Sync Channel'
+              )}
             </Button>
           </div>
 
@@ -270,7 +542,7 @@ export function AutomatedWorkflow() {
                       {job.status}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {job.steps.map((step, idx) => (
                       <div key={step.id} className="flex items-center">

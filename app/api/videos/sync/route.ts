@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     }
 
     // Update channel config
-    updateChannelConfig({ channelUrl, autoProcess: true })
+    await updateChannelConfig({ channelUrl, autoProcess: true })
 
     const apiKey = process.env.YOUTUBE_API_KEY
     if (!apiKey) {
@@ -65,10 +65,11 @@ export async function POST(request: Request) {
       try {
         const videoUrl = `https://www.youtube.com/watch?v=${video.id.videoId}`
         const meta = await fetchYouTubeVideoMeta(videoUrl)
-        const existingVideo = getVideos().find(v => v.videoUrl === meta.videoUrl)
+        const existingVideos = await getVideos()
+        const existingVideo = existingVideos.find(v => v.videoUrl === meta.videoUrl)
 
         if (!existingVideo) {
-          const newVideo = addVideo({
+          const newVideo = await addVideo({
             id: crypto.randomUUID(),
             title: meta.title,
             description: meta.description,
