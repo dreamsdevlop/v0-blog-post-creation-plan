@@ -84,12 +84,12 @@ export default function SettingsPage() {
             </div>
 
             {bloggerStatus !== 'connected' && (
-              <Button asChild className="w-full bg-orange-600 hover:bg-orange-700">
-                <a href="/api/auth/blogger">
+              <a href="/api/auth/blogger" className="block w-full">
+                <Button className="w-full bg-orange-600 hover:bg-orange-700">
                   <ExternalLink data-icon="inline-start" />
                   Connect Google Blogger
-                </a>
-              </Button>
+                </Button>
+              </a>
             )}
 
             <div className="text-sm text-muted-foreground space-y-1">
