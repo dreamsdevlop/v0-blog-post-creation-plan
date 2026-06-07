@@ -1,27 +1,42 @@
 'use client'
 
+import useSWR from 'swr'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, Eye, FileText, Clock } from 'lucide-react'
+import type { BlogPost } from '@/lib/types'
+
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function AnalyticsPage() {
+  const { data: stats } = useSWR<{
+    totalVideos: number
+    totalPosts: number
+    publishedPosts: number
+    draftPosts: number
+    totalViews: number
+    thisMonthViews: number
+  }>('/api/stats', fetcher)
+
+  const { data: posts } = useSWR<BlogPost[]>('/api/posts', fetcher)
+
   const weeklyData = [
-    { day: 'Mon', views: 245 },
-    { day: 'Tue', views: 312 },
-    { day: 'Wed', views: 287 },
-    { day: 'Thu', views: 456 },
-    { day: 'Fri', views: 523 },
-    { day: 'Sat', views: 398 },
-    { day: 'Sun', views: 367 },
+    { day: 'Mon', views: Math.floor((stats?.thisMonthViews || 0) * 0.12) },
+    { day: 'Tue', views: Math.floor((stats?.thisMonthViews || 0) * 0.15) },
+    { day: 'Wed', views: Math.floor((stats?.thisMonthViews || 0) * 0.13) },
+    { day: 'Thu', views: Math.floor((stats?.thisMonthViews || 0) * 0.18) },
+    { day: 'Fri', views: Math.floor((stats?.thisMonthViews || 0) * 0.2) },
+    { day: 'Sat', views: Math.floor((stats?.thisMonthViews || 0) * 0.11) },
+    { day: 'Sun', views: Math.floor((stats?.thisMonthViews || 0) * 0.11) },
   ]
 
-  const maxViews = Math.max(...weeklyData.map(d => d.views))
+  const maxViews = Math.max(...weeklyData.map(d => d.views), 1)
 
-  const topPosts = [
-    { title: 'The Mysterious Disappearance of the Roanoke Colony', views: 1247, growth: 12 },
-    { title: 'Secret Societies That Shaped History', views: 892, growth: 8 },
-    { title: 'The Dark Origins of Ancient Cults', views: 654, growth: -3 },
-  ]
+  const topPosts = (posts || [])
+    .filter(p => p.status === 'published')
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 3)
+    .map(p => ({ title: p.title, views: p.views, growth: 0 }))
 
   const trafficSources = [
     { source: 'Organic Search', percentage: 45 },
@@ -46,7 +61,7 @@ export default function AnalyticsPage() {
             <Eye className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,588</div>
+            <div className="text-2xl font-bold">{(stats?.totalViews || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="size-3 text-green-500" />
               <span className="text-green-500">+12%</span> from last week
@@ -62,8 +77,8 @@ export default function AnalyticsPage() {
             <FileText className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground">1 draft pending</p>
+            <div className="text-2xl font-bold">{stats?.publishedPosts || 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.draftPosts || 0} draft pending</p>
           </CardContent>
         </Card>
 
@@ -88,7 +103,7 @@ export default function AnalyticsPage() {
             <TrendingUp className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12.50</div>
+            <div className="text-2xl font-bold">${((stats?.totalViews || 0) * 0.005).toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Based on $5 RPM</p>
           </CardContent>
         </Card>
@@ -145,29 +160,35 @@ export default function AnalyticsPage() {
           <CardDescription>Your most viewed content</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {topPosts.map((post, index) => (
-              <div
-                key={post.title}
-                className="flex items-center justify-between gap-4 p-4 rounded-lg border border-border"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl font-bold text-muted-foreground">
-                    #{index + 1}
-                  </span>
-                  <div>
-                    <h3 className="font-medium">{post.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {post.views.toLocaleString()} views
-                    </p>
+          {topPosts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No published posts yet
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {topPosts.map((post, index) => (
+                <div
+                  key={post.title}
+                  className="flex items-center justify-between gap-4 p-4 rounded-lg border border-border"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl font-bold text-muted-foreground">
+                      #{index + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-medium">{post.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {post.views.toLocaleString()} views
+                      </p>
+                    </div>
                   </div>
+                  <Badge variant={post.growth > 0 ? 'default' : 'secondary'}>
+                    {post.growth > 0 ? '+' : ''}{post.growth}%
+                  </Badge>
                 </div>
-                <Badge variant={post.growth > 0 ? 'default' : 'secondary'}>
-                  {post.growth > 0 ? '+' : ''}{post.growth}%
-                </Badge>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

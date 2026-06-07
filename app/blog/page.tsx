@@ -1,11 +1,21 @@
 import Link from 'next/link'
-import { getPublishedPosts } from '@/lib/data'
 import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { BookOpen, Clock, Eye } from 'lucide-react'
+import type { BlogPost } from '@/lib/types'
 
-export default function BlogPage() {
-  const posts = getPublishedPosts()
+async function getPublishedPosts(): Promise<BlogPost[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.posts?.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
+    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  ) || []
+}
+
+export default async function BlogPage() {
+  const posts = await getPublishedPosts()
 
   return (
     <div className="min-h-screen">

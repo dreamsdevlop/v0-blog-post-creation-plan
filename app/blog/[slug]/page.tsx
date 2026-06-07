@@ -1,12 +1,30 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getPostBySlug, getPublishedPosts } from '@/lib/data'
 import { formatDistanceToNow, format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { BookOpen, Clock, Eye, ArrowLeft, Share2 } from 'lucide-react'
 import type { Metadata } from 'next'
+import type { BlogPost } from '@/lib/types'
+
+async function getPostBySlug(slug: string): Promise<BlogPost | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.posts?.find((post: BlogPost) => post.slug === slug && post.status === 'published') || null
+}
+
+async function getPublishedPosts(): Promise<BlogPost[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.posts?.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
+    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  ) || []
+}
 
 export async function generateMetadata({ 
   params 
@@ -14,7 +32,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }> 
 }): Promise<Metadata> {
   const { slug } = await params
-  const post = getPostBySlug(slug)
+  const post = await getPostBySlug(slug)
   
   if (!post) {
     return { title: 'Post Not Found' }
@@ -45,15 +63,14 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }> 
 }) {
   const { slug } = await params
-  const post = getPostBySlug(slug)
+  const post = await getPostBySlug(slug)
   
-  if (!post || post.status !== 'published') {
+  if (!post) {
     notFound()
   }
 
-  const relatedPosts = getPublishedPosts()
-    .filter(p => p.id !== post.id)
-    .slice(0, 3)
+  const relatedPosts = await getPublishedPosts()
+    .then(posts => posts.filter(p => p.id !== post.id).slice(0, 3))
 
   return (
     <div className="min-h-screen">
