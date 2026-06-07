@@ -45,6 +45,16 @@ export function AutomatedWorkflow() {
     avgProcessingTime: '3.2 min',
     postsThisWeek: 0
   })
+  const [settings, setSettings] = useState({
+    checkInterval: '60',
+    autoPublish: 'publish',
+    contentModel: 'deepseek',
+    imageStyle: 'auto',
+    dailyPostLimit: 5,
+    minVideoDuration: 5,
+  })
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
 
   // Simulated automation steps
   const automationSteps = [
@@ -294,26 +304,38 @@ export function AutomatedWorkflow() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Check Interval</label>
-              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              <select
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={settings.checkInterval}
+                onChange={(e) => setSettings({ ...settings, checkInterval: e.target.value })}
+              >
                 <option value="15">Every 15 minutes</option>
                 <option value="30">Every 30 minutes</option>
-                <option value="60" selected>Every hour</option>
+                <option value="60">Every hour</option>
                 <option value="360">Every 6 hours</option>
                 <option value="1440">Once daily</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Auto-Publish</label>
-              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              <select
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={settings.autoPublish}
+                onChange={(e) => setSettings({ ...settings, autoPublish: e.target.value })}
+              >
                 <option value="draft">Save as Draft</option>
-                <option value="publish" selected>Publish Immediately</option>
+                <option value="publish">Publish Immediately</option>
                 <option value="schedule">Schedule for Best Time</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Content Model</label>
-              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                <option value="deepseek" selected>DeepSeek 4 Pro Flash</option>
+              <select
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={settings.contentModel}
+                onChange={(e) => setSettings({ ...settings, contentModel: e.target.value })}
+              >
+                <option value="deepseek">DeepSeek 4 Pro Flash</option>
                 <option value="kimi">Kimi K2.6</option>
                 <option value="glm">GLM 5.1</option>
                 <option value="stepfun">StepFun 3.7 Flash</option>
@@ -321,8 +343,12 @@ export function AutomatedWorkflow() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Image Style</label>
-              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                <option value="auto" selected>AI Decides</option>
+              <select
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={settings.imageStyle}
+                onChange={(e) => setSettings({ ...settings, imageStyle: e.target.value })}
+              >
+                <option value="auto">AI Decides</option>
                 <option value="cinematic">Cinematic</option>
                 <option value="dark_artistic">Dark Artistic</option>
                 <option value="noir_mystery">Noir Mystery</option>
@@ -330,17 +356,54 @@ export function AutomatedWorkflow() {
               </select>
             </div>
           </div>
-          
+
           <Separator />
-          
+
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Daily Post Limit</span>
-            <Input type="number" defaultValue={5} className="w-20 text-center" />
+            <Input
+              type="number"
+              value={settings.dailyPostLimit}
+              onChange={(e) => setSettings({ ...settings, dailyPostLimit: parseInt(e.target.value) || 0 })}
+              className="w-20 text-center"
+            />
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Minimum Video Duration</span>
-            <Input type="number" defaultValue={5} className="w-20 text-center" placeholder="min" />
+            <span className="text-muted-foreground">Minimum Video Duration (min)</span>
+            <Input
+              type="number"
+              value={settings.minVideoDuration}
+              onChange={(e) => setSettings({ ...settings, minVideoDuration: parseInt(e.target.value) || 0 })}
+              className="w-20 text-center"
+            />
           </div>
+
+          <Button
+            className="w-full"
+            onClick={async () => {
+              setIsSavingSettings(true)
+              try {
+                await fetch('/api/settings', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ settings }),
+                })
+                setSettingsSaved(true)
+                setTimeout(() => setSettingsSaved(false), 3000)
+              } catch (error) {
+                console.error('Failed to save automation settings:', error)
+              } finally {
+                setIsSavingSettings(false)
+              }
+            }}
+            disabled={isSavingSettings}
+          >
+            {isSavingSettings ? 'Saving...' : 'Save Automation Settings'}
+          </Button>
+
+          {settingsSaved && (
+            <p className="text-xs text-green-500 text-center">Settings saved successfully!</p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -137,7 +137,22 @@ export default async function BlogPostPage({
             <p className="text-sm text-muted-foreground">
               Found this interesting? Share it with others.
             </p>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: post.title,
+                    text: post.excerpt,
+                    url: window.location.href,
+                  })
+                } else {
+                  navigator.clipboard.writeText(window.location.href)
+                  alert('Link copied to clipboard!')
+                }
+              }}
+            >
               <Share2 data-icon="inline-start" />
               Share
             </Button>
