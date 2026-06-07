@@ -148,8 +148,9 @@ export function getVideos(): Video[] {
   return videos
 }
 
-export function addVideo(video: Video): void {
+export function addVideo(video: Video): Video {
   videos.push(video)
+  return video
 }
 
 export function getChannelConfig(): ChannelConfig {
