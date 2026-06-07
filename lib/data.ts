@@ -1,6 +1,6 @@
 import type { BlogPost, Video, DashboardStats, ChannelConfig } from './types'
 
-// In-memory storage (replace with database in production)
+// In-memory storage
 let posts: BlogPost[] = [
   {
     id: '1',
@@ -20,6 +20,8 @@ let posts: BlogPost[] = [
     excerpt: 'The mysterious vanishing of 115 colonists from Roanoke Island in 1590 remains one of America\'s oldest unsolved mysteries.',
     thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
     publishedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     status: 'published',
     seoTitle: 'Roanoke Colony Mystery: What Really Happened to the Lost Colonists?',
     seoDescription: 'Discover the dark truth behind the mysterious disappearance of the Roanoke Colony in 1590.',
@@ -42,6 +44,8 @@ let posts: BlogPost[] = [
     excerpt: 'From the Knights Templar to modern-day power brokers, secret societies have always shaped world events from the shadows.',
     thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
     publishedAt: new Date(Date.now() - 86400000).toISOString(),
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000).toISOString(),
     status: 'published',
     seoTitle: 'Secret Societies: The Hidden Powers Behind History',
     seoDescription: 'Explore the secret societies that have shaped world events for centuries.',
@@ -59,6 +63,8 @@ let posts: BlogPost[] = [
     excerpt: 'Ancient civilizations harbored mysterious religious sects with dark rituals and forbidden knowledge that still influence us today.',
     thumbnail: 'https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=800',
     publishedAt: new Date(Date.now() - 172800000).toISOString(),
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    updatedAt: new Date(Date.now() - 172800000).toISOString(),
     status: 'draft',
     tags: ['cults', 'ancient history', 'religion', 'rituals'],
     views: 0,
@@ -99,6 +105,10 @@ export function getPosts(): BlogPost[] {
   return posts
 }
 
+export function getAllPosts(): BlogPost[] {
+  return posts
+}
+
 export function getPostById(id: string): BlogPost | undefined {
   return posts.find(p => p.id === id)
 }
@@ -108,13 +118,14 @@ export function getPostBySlug(slug: string): BlogPost | undefined {
 }
 
 export function getPublishedPosts(): BlogPost[] {
-  return posts.filter(p => p.status === 'published').sort((a, b) => 
+  return posts.filter(p => p.status === 'published').sort((a, b) =>
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
 }
 
 export function createPost(post: Omit<BlogPost, 'id'>): BlogPost {
-  const newPost = { ...post, id: crypto.randomUUID() }
+  const now = new Date().toISOString()
+  const newPost = { ...post, id: crypto.randomUUID(), createdAt: post.createdAt || now, updatedAt: now }
   posts.push(newPost)
   return newPost
 }
@@ -122,7 +133,7 @@ export function createPost(post: Omit<BlogPost, 'id'>): BlogPost {
 export function updatePost(id: string, updates: Partial<BlogPost>): BlogPost | null {
   const index = posts.findIndex(p => p.id === id)
   if (index === -1) return null
-  posts[index] = { ...posts[index], ...updates }
+  posts[index] = { ...posts[index], ...updates, updatedAt: new Date().toISOString() }
   return posts[index]
 }
 
@@ -154,10 +165,9 @@ export function getStats(): DashboardStats {
   const published = posts.filter(p => p.status === 'published')
   const drafts = posts.filter(p => p.status === 'draft')
   const totalViews = posts.reduce((sum, p) => sum + p.views, 0)
-  
-  // Calculate this month's views (simplified)
+
   const thisMonthViews = Math.floor(totalViews * 0.4)
-  
+
   return {
     totalVideos: videos.length,
     totalPosts: posts.length,

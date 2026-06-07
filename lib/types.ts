@@ -18,6 +18,8 @@ export interface BlogPost {
   excerpt: string
   thumbnail: string
   publishedAt: string
+  createdAt: string
+  updatedAt?: string
   status: 'draft' | 'published' | 'scheduled'
   seoTitle?: string
   seoDescription?: string
