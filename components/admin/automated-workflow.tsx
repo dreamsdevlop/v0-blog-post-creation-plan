@@ -48,6 +48,7 @@ export function AutomatedWorkflow() {
   const [settings, setSettings] = useState({
     checkInterval: '60',
     autoPublish: 'publish',
+    autoGeneratePosts: true,
     contentModel: 'deepseek',
     imageStyle: 'auto',
     dailyPostLimit: 5,
@@ -95,7 +96,31 @@ export function AutomatedWorkflow() {
         actualVideoUrl = channelUrl
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Fetch video metadata from YouTube API
+      let videoMeta: { title: string; description: string; thumbnail: string; publishedAt: string; channelTitle: string; videoUrl: string; duration: string } | null = null
+      if (actualVideoUrl) {
+        try {
+          const metaRes = await fetch('/api/youtube/transcript', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoUrl: actualVideoUrl }),
+          })
+          if (metaRes.ok) {
+            const metaData = await metaRes.json()
+            videoMeta = {
+              title: videoTitle,
+              description: metaData.transcript || '',
+              thumbnail: '',
+              publishedAt: new Date().toISOString(),
+              channelTitle: '',
+              videoUrl: actualVideoUrl,
+              duration: 'PT0S',
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch video metadata:', error)
+        }
+      }
 
       setJobs(prev => prev.map(job =>
         job.id === jobId
@@ -124,8 +149,6 @@ export function AutomatedWorkflow() {
             transcript = transcriptData.transcript || ''
           }
         }
-
-        await new Promise(resolve => setTimeout(resolve, 1500))
 
         setJobs(prev => prev.map(job =>
           job.id === jobId
@@ -169,8 +192,6 @@ export function AutomatedWorkflow() {
           generatedContent = await generateRes.json()
         }
 
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
         setJobs(prev => prev.map(job =>
           job.id === jobId
             ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'completed' as const, message: generatedContent ? 'Content generated' : 'Using fallback' } : step) }
@@ -207,8 +228,6 @@ export function AutomatedWorkflow() {
           generatedImage = await imageRes.json()
         }
 
-        await new Promise(resolve => setTimeout(resolve, 1500))
-
         setJobs(prev => prev.map(job =>
           job.id === jobId
             ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'completed' as const, message: generatedImage ? 'Image generated' : 'Using default' } : step) }
@@ -228,8 +247,6 @@ export function AutomatedWorkflow() {
           ? { ...job, steps: job.steps.map((step, idx) => idx === 4 ? { ...step, status: 'running' as const } : step) }
           : job
       ))
-
-      await new Promise(resolve => setTimeout(resolve, 800))
 
       setJobs(prev => prev.map(job =>
         job.id === jobId
@@ -268,7 +285,6 @@ export function AutomatedWorkflow() {
 
           if (publishRes.ok) {
             const publishedPost = await publishRes.json()
-            await new Promise(resolve => setTimeout(resolve, 1000))
 
             setJobs(prev => prev.map(job =>
               job.id === jobId
@@ -339,7 +355,7 @@ export function AutomatedWorkflow() {
           : job
       ))
 
-      const syncRes = await fetch('/api/videos/sync', {
+      const syncRes = await fetch('/api/channels/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelUrl }),

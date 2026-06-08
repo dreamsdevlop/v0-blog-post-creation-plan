@@ -17,3 +17,10 @@ node_modules
 
 # App data (persisted storage)
 /data/
+
+# Local env files
+.env.local
+.env.*.local
+
+# Env vars reference (contains sensitive examples)
+vercel-env-vars.json

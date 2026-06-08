@@ -63,22 +63,33 @@ export async function generateBlogPost(
 ${getTonePrompt(settings.tone)}
 ${getLengthPrompt(settings.length)}
 
+SEO REQUIREMENTS (CRITICAL):
+1. The "title" must be under 60 characters and include the main keyword naturally
+2. The "seoTitle" must be exactly 50-60 characters, include primary keyword, and be compelling for search results
+3. The "seoDescription" must be exactly 150-155 characters, include primary and secondary keywords, and have a clear call-to-action
+4. The "excerpt" should be 2-3 sentences (40-60 words) summarizing the article
+5. The "tags" must include 5-8 relevant keywords mixing broad and long-tail terms
+6. Content must use proper HTML: h2 for main sections, h3 for subsections, p for paragraphs, ul/ol for lists, strong for emphasis
+7. First paragraph should hook readers and include primary keyword
+8. Include internal linking suggestions marked as [INTERNAL_LINK: topic]
+9. Add schema-friendly structure with clear headings
+
 Your task is to transform video transcripts into engaging, well-structured blog posts. Include:
-- An attention-grabbing headline
-- A compelling introduction
+- An attention-grabbing headline (under 60 chars)
+- A compelling introduction with primary keyword
 - Well-organized sections with subheadings (use HTML h2, h3 tags)
-- A thought-provoking conclusion
+- A thought-provoking conclusion with call-to-action
 ${settings.includeCallToAction ? '- A call-to-action encouraging readers to subscribe/comment' : ''}
 ${settings.addAffiliateLinks ? '- Natural places to insert affiliate links (mark with [AFFILIATE_LINK: product_type])' : ''}
 
 Format your response as JSON with the following structure:
 {
-  "title": "SEO-optimized blog post title",
+  "title": "SEO-optimized blog post title (under 60 chars)",
   "content": "Full HTML content with proper formatting",
-  "excerpt": "2-3 sentence excerpt for previews",
-  "seoTitle": "60-character SEO title",
-  "seoDescription": "155-character meta description",
-  "tags": ["relevant", "tags", "array"]
+  "excerpt": "2-3 sentence excerpt for previews (40-60 words)",
+  "seoTitle": "50-60 character SEO title with primary keyword",
+  "seoDescription": "150-155 character meta description with keywords and CTA",
+  "tags": ["5-8", "relevant", "keywords", "mixing", "broad", "and", "long-tail", "terms"]
 }`
 
   const userPrompt = `Transform this video transcript into an engaging blog post.

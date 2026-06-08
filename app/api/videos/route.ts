@@ -35,7 +35,15 @@ export async function POST(request: Request) {
 
     // Auto-fetch transcript in background
     if (autoFetchTranscript) {
-      fetchTranscript(videoUrl).catch((error) => {
+      fetchTranscript(videoUrl).then((result) => {
+        const transcriptText = result.text
+        addVideo({
+          ...newVideo,
+          description: `${newVideo.description}\n\n[TRANSCRIPT]\n${transcriptText}`,
+        }).catch((error) => {
+          console.error('Failed to save transcript:', error)
+        })
+      }).catch((error) => {
         console.error('Background transcript fetch failed:', error)
       })
     }

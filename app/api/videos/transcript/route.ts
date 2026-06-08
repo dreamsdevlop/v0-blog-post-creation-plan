@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getVideos, addVideo } from '@/lib/data'
-import { fetchTranscript, formatTranscriptForAI } from '@/lib/youtube'
+import { fetchTranscript } from '@/lib/youtube'
 
 export async function POST(request: Request) {
   try {
@@ -18,8 +18,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 })
     }
 
-    const chunks = await fetchTranscript(video.videoUrl)
-    const transcriptText = formatTranscriptForAI(chunks)
+    const result = await fetchTranscript(video.videoUrl)
+    const transcriptText = result.text
+    const chunks = result.chunks || []
 
     // Update video with transcript data
     const updatedVideo = await addVideo({
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       transcript: transcriptText,
       chunks,
       wordCount: transcriptText.split(/\s+/).length,
+      source: result.source,
     })
   } catch (error) {
     console.error('Transcript fetch error:', error)

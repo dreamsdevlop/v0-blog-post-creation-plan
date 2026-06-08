@@ -119,10 +119,15 @@ export default function VideosPage() {
     setImportError(null)
 
     try {
-      const response = await fetch('/api/videos/sync', {
+      const response = await fetch('/api/channels/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelUrl }),
+        body: JSON.stringify({
+          channelUrl,
+          maxVideos: 10,
+          autoFetchTranscript: true,
+          autoGeneratePosts: false,
+        }),
       })
 
       const data = await response.json()
@@ -415,6 +420,11 @@ export default function VideosPage() {
                         {video.status === 'pending' && <Loader2 className="size-3 mr-1 animate-spin" />}
                         {video.status}
                       </Badge>
+                      {video.transcript && (
+                        <Badge variant="outline" className="text-xs">
+                          Transcript available
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex gap-2 mt-3">
                       {video.status !== 'transcript_ready' && (

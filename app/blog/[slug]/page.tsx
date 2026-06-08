@@ -8,6 +8,38 @@ import { BookOpen, Clock, Eye, ArrowLeft, Share2 } from 'lucide-react'
 import type { Metadata } from 'next'
 import type { BlogPost } from '@/lib/types'
 
+function generateJsonLd(post: BlogPost) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.seoTitle || post.title,
+    description: post.seoDescription || post.excerpt,
+    image: post.thumbnail,
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt || post.publishedAt,
+    author: {
+      '@type': 'Organization',
+      name: 'Dark Chronicles',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Dark Chronicles',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/icon.svg`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog/${post.slug}`,
+    },
+    keywords: post.tags.join(', '),
+    wordCount: post.content.replace(/<[^>]*>/g, '').split(/\s+/).length,
+    articleSection: post.tags[0] || 'History',
+    inLanguage: 'en-US',
+  }
+}
+
 async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
@@ -28,10 +60,10 @@ async function getPublishedPosts(): Promise<BlogPost[]> {
   )
 }
 
-export async function generateMetadata({ 
-  params 
-}: { 
-  params: Promise<{ slug: string }> 
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
   const post = await getPostBySlug(slug)
@@ -40,21 +72,41 @@ export async function generateMetadata({
     return { title: 'Post Not Found' }
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const title = post.seoTitle || post.title
+  const description = post.seoDescription || post.excerpt
+
   return {
-    title: post.seoTitle || post.title,
-    description: post.seoDescription || post.excerpt,
+    title,
+    description,
+    alternates: {
+      canonical: `${siteUrl}/blog/${post.slug}`,
+    },
     openGraph: {
-      title: post.seoTitle || post.title,
-      description: post.seoDescription || post.excerpt,
-      images: [post.thumbnail],
+      title,
+      description,
+      url: `${siteUrl}/blog/${post.slug}`,
+      siteName: 'Dark Chronicles',
+      images: [
+        {
+          url: post.thumbnail,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
       type: 'article',
       publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt || post.publishedAt,
+      authors: ['Dark Chronicles'],
+      tags: post.tags,
     },
     twitter: {
       card: 'summary_large_image',
-      title: post.seoTitle || post.title,
-      description: post.seoDescription || post.excerpt,
+      title,
+      description,
       images: [post.thumbnail],
+      creator: '@darkchronicles',
     },
   }
 }
@@ -76,6 +128,12 @@ export default async function BlogPostPage({
 
   return (
     <div className="min-h-screen">
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateJsonLd(post)) }}
+      />
+
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4">
