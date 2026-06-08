@@ -9,17 +9,20 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://darkchronicles.vercel.app'
+
 export const metadata: Metadata = {
   title: 'Dark Chronicles - History, Mystery & Hidden Truths',
   description: 'Automated blog revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',
   generator: 'v0.app',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://darkchronicles.vercel.app'),
+  metadataBase: new URL(siteUrl),
   openGraph: {
     title: 'Dark Chronicles - History, Mystery & Hidden Truths',
     description: 'Revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',
     type: 'website',
     locale: 'en_US',
     siteName: 'Dark Chronicles',
+    url: siteUrl,
   },
   twitter: {
     card: 'summary_large_image',
@@ -31,9 +34,9 @@ export const metadata: Metadata = {
       'application/rss+xml': '/feed.xml',
     },
   },
-  verification: {
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? {
     google: process.env.GOOGLE_SITE_VERIFICATION,
-  },
+  } : undefined,
   icons: {
     icon: [
       {

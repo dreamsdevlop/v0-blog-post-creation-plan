@@ -20,7 +20,6 @@ export async function POST(request: Request) {
 
     const result = await fetchTranscript(video.videoUrl)
     const transcriptText = result.text
-    const chunks = result.chunks || []
 
     // Update video with transcript data
     const updatedVideo = await addVideo({
@@ -31,7 +30,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       video: updatedVideo,
       transcript: transcriptText,
-      chunks,
       wordCount: transcriptText.split(/\s+/).length,
       source: result.source,
     })
