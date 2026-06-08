@@ -138,7 +138,10 @@ const SEED_SETTINGS: Record<string, unknown> = {
   adsenseId: '',
   amazonAffiliateId: '',
   autoPublish: false,
+  autoFetchTranscript: true,
   defaultModel: 'deepseek',
+  publishTime: '09:00',
+  timezone: 'UTC',
 }
 
 // Posts

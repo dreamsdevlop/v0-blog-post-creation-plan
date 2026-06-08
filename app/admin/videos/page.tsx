@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Video, Link as LinkIcon, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Video, Link as LinkIcon, RefreshCw, CheckCircle, AlertCircle, Loader2, FileText, Wand2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function VideosPage() {
-  const { data: videosData, mutate: mutateVideos } = useSWR<{ videos: Array<{ id: string; title: string; thumbnail: string }> }>('/api/videos', fetcher)
+  const { data: videosData, mutate: mutateVideos } = useSWR<{ videos: Array<{ id: string; title: string; thumbnail: string; description?: string }> }>('/api/videos', fetcher)
   const [channelUrl, setChannelUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [isConnected, setIsConnected] = useState(false)
@@ -20,12 +21,17 @@ export default function VideosPage() {
     id: string
     title: string
     thumbnail: string
-    status: 'pending' | 'processed' | 'error'
+    status: 'pending' | 'processed' | 'error' | 'transcript_ready'
     error?: string
+    transcript?: string
+    isGenerating?: boolean
   }>>([])
   const [isImporting, setIsImporting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<{ id: string; title: string; transcript?: string } | null>(null)
+  const [generatedContent, setGeneratedContent] = useState<{ title: string; content: string; excerpt: string } | null>(null)
+  const [isGeneratingPost, setIsGeneratingPost] = useState(false)
 
   useEffect(() => {
     if (videosData?.videos) {
@@ -35,6 +41,7 @@ export default function VideosPage() {
           title: v.title,
           thumbnail: v.thumbnail,
           status: 'processed' as const,
+          transcript: v.description?.includes('[TRANSCRIPT]') ? v.description.split('[TRANSCRIPT]')[1]?.trim() : undefined,
         }))
       )
     }
@@ -57,7 +64,7 @@ export default function VideosPage() {
         id: tempId,
         title: 'Importing...',
         thumbnail: '',
-        status: 'pending',
+        status: 'pending' as const,
       },
       ...prev,
     ])
@@ -66,7 +73,7 @@ export default function VideosPage() {
       const response = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoUrl }),
+        body: JSON.stringify({ videoUrl, autoFetchTranscript: true }),
       })
 
       const data = await response.json()
@@ -143,6 +150,129 @@ export default function VideosPage() {
     }
   }
 
+  const handleFetchTranscript = async (videoId: string) => {
+    setImportedVideos(prev =>
+      prev.map(v =>
+        v.id === videoId ? { ...v, status: 'pending' as const } : v
+      )
+    )
+
+    try {
+      const response = await fetch('/api/videos/transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch transcript')
+      }
+
+      setImportedVideos(prev =>
+        prev.map(v =>
+          v.id === videoId
+            ? {
+                ...v,
+                status: 'transcript_ready' as const,
+                transcript: data.transcript,
+              }
+            : v
+        )
+      )
+
+      // Update the video in the list
+      mutateVideos()
+    } catch (error) {
+      setImportedVideos(prev =>
+        prev.map(v =>
+          v.id === videoId
+            ? {
+                ...v,
+                status: 'processed' as const,
+                error: error instanceof Error ? error.message : 'Transcript fetch failed',
+              }
+            : v
+        )
+      )
+    }
+  }
+
+  const handleGeneratePost = async (videoId: string, videoTitle: string, transcript?: string) => {
+    if (!transcript) {
+      setImportError('No transcript available. Please fetch transcript first.')
+      return
+    }
+
+    setIsGeneratingPost(true)
+    setSelectedVideo({ id: videoId, title: videoTitle, transcript })
+    setGeneratedContent(null)
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript,
+          videoTitle,
+          settings: {
+            model: 'deepseek',
+            tone: 'mysterious',
+            length: 'medium',
+            includeCallToAction: true,
+            addAffiliateLinks: false,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate post')
+      }
+
+      const result = await response.json()
+      setGeneratedContent(result)
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Failed to generate post')
+    } finally {
+      setIsGeneratingPost(false)
+    }
+  }
+
+  const handleSavePost = async () => {
+    if (!generatedContent || !selectedVideo) return
+
+    try {
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoId: selectedVideo.id,
+          title: generatedContent.title,
+          slug: generatedContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50),
+          content: generatedContent.content,
+          excerpt: generatedContent.excerpt,
+          thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
+          publishedAt: new Date().toISOString(),
+          status: 'draft',
+          seoTitle: generatedContent.title.slice(0, 60),
+          seoDescription: generatedContent.excerpt.slice(0, 155),
+          tags: ['history', 'mystery'],
+          views: 0,
+          aiModel: 'deepseek',
+        }),
+      })
+
+      if (response.ok) {
+        setSelectedVideo(null)
+        setGeneratedContent(null)
+        alert('Post saved as draft!')
+      }
+    } catch (error) {
+      setImportError('Failed to save post')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -162,7 +292,7 @@ export default function VideosPage() {
           <CardHeader>
             <CardTitle>Connect Partner Channel</CardTitle>
             <CardDescription>
-              Link your partner&apos;s YouTube channel for automatic video syncing
+              Link your partner's YouTube channel for automatic video syncing
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -208,9 +338,18 @@ export default function VideosPage() {
                 onChange={(e) => setVideoUrl(e.target.value)}
               />
             </div>
-            <Button onClick={handleImport} disabled={!videoUrl}>
-              <Video data-icon="inline-start" />
-              Import Video
+            <Button onClick={handleImport} disabled={!videoUrl || isImporting}>
+              {isImporting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Video data-icon="inline-start" />
+                  Import Video
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -240,7 +379,7 @@ export default function VideosPage() {
               {importedVideos.map((video) => (
                 <div
                   key={video.id}
-                  className="flex items-center gap-4 rounded-lg border border-border p-4"
+                  className="flex items-start gap-4 rounded-lg border border-border p-4"
                 >
                   {video.thumbnail ? (
                     <img
@@ -258,20 +397,57 @@ export default function VideosPage() {
                     {video.error && (
                       <p className="text-xs text-destructive mt-1">{video.error}</p>
                     )}
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-2">
                       <Badge
                         variant={
-                          video.status === 'processed'
+                          video.status === 'transcript_ready'
                             ? 'default'
+                            : video.status === 'processed'
+                            ? 'secondary'
                             : video.status === 'error'
                             ? 'destructive'
                             : 'secondary'
                         }
                       >
+                        {video.status === 'transcript_ready' && <CheckCircle className="size-3 mr-1" />}
                         {video.status === 'processed' && <CheckCircle className="size-3 mr-1" />}
                         {video.status === 'error' && <AlertCircle className="size-3 mr-1" />}
+                        {video.status === 'pending' && <Loader2 className="size-3 mr-1 animate-spin" />}
                         {video.status}
                       </Badge>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      {video.status !== 'transcript_ready' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFetchTranscript(video.id)}
+                          disabled={video.status === 'pending'}
+                        >
+                          <FileText className="size-3 mr-1" />
+                          Fetch Transcript
+                        </Button>
+                      )}
+                      {video.status === 'transcript_ready' && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleGeneratePost(video.id, video.title, video.transcript)}
+                          disabled={isGeneratingPost}
+                        >
+                          {isGeneratingPost ? (
+                            <>
+                              <Loader2 className="size-3 mr-1 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="size-3 mr-1" />
+                              Generate Post
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -280,6 +456,50 @@ export default function VideosPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Transcript Preview Modal */}
+      {selectedVideo && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Transcript: {selectedVideo.title}</CardTitle>
+                <CardDescription>
+                  {selectedVideo.transcript ? `${selectedVideo.transcript.split(/\s+/).length} words` : 'No transcript'}
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { setSelectedVideo(null); setGeneratedContent(null) }}>
+                Close
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedVideo.transcript && (
+              <Textarea
+                value={selectedVideo.transcript}
+                readOnly
+                className="h-48 text-sm"
+              />
+            )}
+            {generatedContent && (
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-medium">Generated Post Preview</h3>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Title: {generatedContent.title}</p>
+                  <p className="text-sm text-muted-foreground">Excerpt: {generatedContent.excerpt}</p>
+                  <div className="border rounded-lg p-4 bg-muted/50">
+                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: generatedContent.content }} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSavePost}>Save as Draft</Button>
+                  <Button variant="outline" onClick={() => setGeneratedContent(null)}>Discard</Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

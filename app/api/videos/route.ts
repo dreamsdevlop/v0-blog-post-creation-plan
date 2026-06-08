@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { addVideo, getVideos } from '@/lib/data'
-import { fetchYouTubeVideoMeta } from '@/lib/youtube'
+import { fetchYouTubeVideoMeta, fetchTranscript } from '@/lib/youtube'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { videoUrl } = body as { videoUrl?: string }
+    const { videoUrl, autoFetchTranscript = true } = body as { videoUrl?: string; autoFetchTranscript?: boolean }
 
     if (!videoUrl) {
       return NextResponse.json({ error: 'videoUrl is required' }, { status: 400 })
@@ -32,6 +32,13 @@ export async function POST(request: Request) {
       videoUrl: meta.videoUrl,
       duration: meta.duration,
     })
+
+    // Auto-fetch transcript in background
+    if (autoFetchTranscript) {
+      fetchTranscript(videoUrl).catch((error) => {
+        console.error('Background transcript fetch failed:', error)
+      })
+    }
 
     return NextResponse.json({
       video: newVideo,
