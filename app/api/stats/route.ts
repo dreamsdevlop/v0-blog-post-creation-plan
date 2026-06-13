@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getStats } from '@/lib/data'
+import { isDbAvailable } from '@/lib/db'
 
 export async function GET() {
   try {
     const stats = await getStats()
-    return NextResponse.json(stats)
+    return NextResponse.json({ ...stats, dataSource: isDbAvailable() ? 'database' : 'file' })
   } catch (error) {
     console.error('Failed to fetch stats:', error)
     return NextResponse.json(
@@ -15,6 +16,7 @@ export async function GET() {
         draftPosts: 0,
         totalViews: 0,
         thisMonthViews: 0,
+        dataSource: 'error',
       },
       { status: 500 }
     )

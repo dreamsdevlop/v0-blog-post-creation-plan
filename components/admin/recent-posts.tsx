@@ -7,17 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Edit, Eye, Trash2 } from 'lucide-react'
+import { Edit, Eye, Trash2, AlertCircle } from 'lucide-react'
 import type { BlogPost } from '@/lib/types'
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  }
+  return res.json()
+})
 
 export function RecentPosts() {
-  const { data: posts, isLoading, mutate } = useSWR<BlogPost[]>('/api/posts', fetcher)
+  const { data: posts, error, isLoading, mutate } = useSWR<BlogPost[]>('/api/posts', fetcher)
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this post?')) return
-    
+
     await fetch(`/api/posts?id=${id}`, { method: 'DELETE' })
     mutate()
   }
@@ -38,6 +43,21 @@ export function RecentPosts() {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive/50">
+        <CardHeader className="flex flex-row items-center gap-2">
+          <AlertCircle className="size-4 text-destructive" />
+          <CardTitle className="text-sm font-medium text-destructive">Failed to load posts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">{error.message}</p>
+          <p className="text-xs text-muted-foreground mt-1">Check server logs for details.</p>
         </CardContent>
       </Card>
     )
