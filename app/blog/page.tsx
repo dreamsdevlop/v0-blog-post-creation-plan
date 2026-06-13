@@ -1,8 +1,7 @@
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
-import { Badge } from '@/components/ui/badge'
-import { BookOpen, Clock, Eye } from 'lucide-react'
+import { BookOpen } from 'lucide-react'
 import type { BlogPost } from '@/lib/types'
+import { HoverRevealCard } from '@/components/ui/hover-reveal-card'
 
 async function getPublishedPosts(): Promise<BlogPost[]> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -67,47 +66,11 @@ export default async function BlogPage() {
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post, index) => (
-              <article
+              <HoverRevealCard
                 key={post.id}
-                className={`group ${index === 0 ? 'md:col-span-2 lg:col-span-2' : ''}`}
-              >
-                <Link href={`/blog/${post.slug}`}>
-                  <div className={`overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/50 ${index === 0 ? 'flex flex-col md:flex-row' : ''}`}>
-                    <div className={`relative overflow-hidden ${index === 0 ? 'md:w-1/2' : 'aspect-video'}`}>
-                      <img
-                        src={post.thumbnail}
-                        alt={post.title}
-                        className={`size-full object-cover transition-transform group-hover:scale-105 ${index === 0 ? 'aspect-video md:aspect-auto md:h-full' : ''}`}
-                      />
-                    </div>
-                    <div className={`p-6 ${index === 0 ? 'md:w-1/2 md:flex md:flex-col md:justify-center' : ''}`}>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {post.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <h3 className={`font-bold text-card-foreground group-hover:text-primary transition-colors ${index === 0 ? 'text-2xl' : 'text-lg'}`}>
-                        {post.title}
-                      </h3>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {post.excerpt}
-                      </p>
-                      <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-3" />
-                          {formatDistanceToNow(new Date(post.publishedAt), { addSuffix: true })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Eye className="size-3" />
-                          {post.views.toLocaleString()} views
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </article>
+                post={post}
+                featured={index === 0}
+              />
             ))}
           </div>
         )}
