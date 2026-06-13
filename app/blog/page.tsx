@@ -15,7 +15,14 @@ async function getPublishedPosts(): Promise<BlogPost[]> {
 }
 
 export default async function BlogPage() {
-  const posts = await getPublishedPosts()
+  let posts: BlogPost[] = []
+  let fetchError: string | null = null
+
+  try {
+    posts = await getPublishedPosts()
+  } catch (error) {
+    fetchError = error instanceof Error ? error.message : 'Failed to load posts'
+  }
 
   return (
     <div className="min-h-screen">
@@ -59,7 +66,12 @@ export default async function BlogPage() {
 
       {/* Posts Grid */}
       <main className="container mx-auto px-4 py-12">
-        {posts.length === 0 ? (
+        {fetchError ? (
+          <div className="text-center py-16">
+            <p className="text-destructive">Failed to load posts</p>
+            <p className="mt-2 text-sm text-muted-foreground">{fetchError}</p>
+          </div>
+        ) : posts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted-foreground">No posts published yet. Check back soon.</p>
           </div>
