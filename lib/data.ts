@@ -1,4 +1,4 @@
-import type { BlogPost, Video, DashboardStats, ChannelConfig } from './types'
+import type { BlogPost, Video, ChannelConfig, DashboardStats } from './types'
 import {
   loadPosts,
   savePosts,
@@ -40,31 +40,56 @@ let channelConfig: ChannelConfig = {
 
 let initialized = false
 let useDatabase = false
+let initError: string | null = null
+let initPromise: Promise<void> | null = null
 
 async function ensureInitialized() {
   if (initialized) return
-
-  // Try database first
-  try {
-    await initDatabase()
-    if (isDbAvailable()) {
-      posts = await dbGetPosts()
-      videos = await dbGetVideos()
-      channelConfig = await dbGetChannelConfig()
-      useDatabase = true
-      initialized = true
-      return
-    }
-  } catch (error) {
-    console.log('Database not available, using file storage:', error)
+  if (initPromise) {
+    await initPromise
+    return
   }
 
-  // Fallback to file storage
-  posts = await loadPosts()
-  videos = await loadVideos()
-  channelConfig = await loadChannelConfig()
-  useDatabase = false
-  initialized = true
+  initPromise = (async () => {
+    // Try database first
+    try {
+      await initDatabase()
+      if (isDbAvailable()) {
+        posts = await dbGetPosts()
+        videos = await dbGetVideos()
+        channelConfig = await dbGetChannelConfig()
+        useDatabase = true
+        initialized = true
+        return
+      }
+    } catch (error) {
+      console.log('Database not available, using file storage:', error)
+    }
+
+    // Fallback to file storage
+    try {
+      posts = await loadPosts()
+      videos = await loadVideos()
+      channelConfig = await loadChannelConfig()
+      useDatabase = false
+      initialized = true
+    } catch (error) {
+      console.error('File storage initialization failed:', error)
+      initError = error instanceof Error ? error.message : 'Unknown error'
+      initialized = true
+      useDatabase = false
+      posts = []
+      videos = []
+      channelConfig = {
+        channelId: '',
+        channelName: '',
+        channelUrl: '',
+        autoProcess: false,
+      }
+    }
+  })()
+
+  await initPromise
 }
 
 // Data access functions
@@ -209,9 +234,15 @@ export async function getStats(): Promise<DashboardStats> {
   if (useDatabase) {
     return dbGetStats()
   }
+  if (initError) {
+    throw new Error(`Storage initialization failed: ${initError}`)
+  }
+  if (!Array.isArray(posts) || !Array.isArray(videos)) {
+    throw new Error('Invalid data state: posts or videos is not an array')
+  }
   const published = posts.filter(p => p.status === 'published')
   const drafts = posts.filter(p => p.status === 'draft')
-  const totalViews = posts.reduce((sum, p) => sum + p.views, 0)
+  const totalViews = posts.reduce((sum, p) => sum + (typeof p.views === 'number' ? p.views : 0), 0)
 
   const thisMonthViews = Math.floor(totalViews * 0.4)
 
@@ -224,3 +255,5 @@ export async function getStats(): Promise<DashboardStats> {
     thisMonthViews,
   }
 }
+
+export { isDbAvailable } from './db'
