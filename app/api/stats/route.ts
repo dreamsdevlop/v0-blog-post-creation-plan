@@ -8,6 +8,7 @@ export async function GET() {
     return NextResponse.json({ ...stats, dataSource: isDbAvailable() ? 'database' : 'file' })
   } catch (error) {
     console.error('Failed to fetch stats:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       {
         totalVideos: 0,
@@ -17,6 +18,7 @@ export async function GET() {
         totalViews: 0,
         thisMonthViews: 0,
         dataSource: 'error',
+        error: message,
       },
       { status: 500 }
     )
