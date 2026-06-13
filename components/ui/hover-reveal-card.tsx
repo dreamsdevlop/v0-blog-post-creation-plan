@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { BookOpen, Clock, Eye, ArrowRight } from "lucide-react"
+import { Clock, Eye, ArrowRight } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import type { BlogPost } from "@/lib/types"
 
