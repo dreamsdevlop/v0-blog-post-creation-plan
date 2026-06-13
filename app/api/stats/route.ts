@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
-import { getStats } from '@/lib/data'
-import { isDbAvailable } from '@/lib/db'
+import { getStats, isDbAvailable } from '@/lib/data'
 
 export async function GET() {
+  let stats
   try {
-    const stats = await getStats()
-    return NextResponse.json({ ...stats, dataSource: isDbAvailable() ? 'database' : 'file' })
+    stats = await getStats()
   } catch (error) {
-    console.error('Failed to fetch stats:', error)
+    console.error('Stats API error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'
+    const stack = error instanceof Error ? error.stack : undefined
     return NextResponse.json(
       {
         totalVideos: 0,
@@ -19,8 +19,11 @@ export async function GET() {
         thisMonthViews: 0,
         dataSource: 'error',
         error: message,
+        ...(process.env.NODE_ENV === 'development' && { stack }),
       },
       { status: 500 }
     )
   }
+
+  return NextResponse.json({ ...stats, dataSource: isDbAvailable() ? 'database' : 'file' })
 }
