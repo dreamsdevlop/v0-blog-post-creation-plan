@@ -1,0 +1,72 @@
+import { NextResponse } from 'next/server'
+import { addVideo, getVideos } from '@/lib/data'
+import { fetchYouTubeVideoMeta, fetchTranscript } from '@/lib/youtube'
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { videoUrl, autoFetchTranscript = true } = body as { videoUrl?: string; autoFetchTranscript?: boolean }
+
+    if (!videoUrl) {
+      return NextResponse.json({ error: 'videoUrl is required' }, { status: 400 })
+    }
+
+    const meta = await fetchYouTubeVideoMeta(videoUrl)
+    const existingVideos = await getVideos()
+    const existingVideo = existingVideos.find(v => v.videoUrl === meta.videoUrl)
+
+    if (existingVideo) {
+      return NextResponse.json({
+        video: existingVideo,
+        message: 'Video already imported',
+      })
+    }
+
+    const newVideo = await addVideo({
+      id: crypto.randomUUID(),
+      title: meta.title,
+      description: meta.description,
+      thumbnail: meta.thumbnail,
+      publishedAt: meta.publishedAt,
+      channelTitle: meta.channelTitle,
+      videoUrl: meta.videoUrl,
+      duration: meta.duration,
+    })
+
+    // Auto-fetch transcript in background
+    if (autoFetchTranscript) {
+      fetchTranscript(videoUrl).then((result) => {
+        const transcriptText = result.text
+        addVideo({
+          ...newVideo,
+          description: `${newVideo.description}\n\n[TRANSCRIPT]\n${transcriptText}`,
+        }).catch((error) => {
+          console.error('Failed to save transcript:', error)
+        })
+      }).catch((error) => {
+        console.error('Background transcript fetch failed:', error)
+      })
+    }
+
+    return NextResponse.json({
+      video: newVideo,
+      message: 'Video imported successfully',
+    })
+  } catch (error) {
+    console.error('Video import error:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to import video' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET() {
+  try {
+    const videos = await getVideos()
+    return NextResponse.json({ videos })
+  } catch (error) {
+    console.error('Failed to fetch videos:', error)
+    return NextResponse.json({ error: 'Failed to fetch videos' }, { status: 500 })
+  }
+}
