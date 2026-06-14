@@ -1,0 +1,22 @@
+[
+  {
+    "id": "vid-1",
+    "title": "What Really Happened at Dyatlov Pass?",
+    "description": "Exploring the mysterious deaths of 9 hikers in 1959",
+    "thumbnail": "https://images.unsplash.com/photo-1478827536114-da961b7f86d2?w=400",
+    "publishedAt": "2026-06-07T21:28:26.386Z",
+    "channelTitle": "Dark History Channel",
+    "videoUrl": "https://youtube.com/watch?v=example1",
+    "duration": "PT15M30S"
+  },
+  {
+    "id": "vid-2",
+    "title": "The Curse of the Hope Diamond",
+    "description": "The dark history of the world's most famous gem",
+    "thumbnail": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400",
+    "publishedAt": "2026-06-06T21:28:26.386Z",
+    "channelTitle": "Dark History Channel",
+    "videoUrl": "https://youtube.com/watch?v=example2",
+    "duration": "PT12M45S"
+  }
+]

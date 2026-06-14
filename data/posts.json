@@ -1,0 +1,69 @@
+[
+  {
+    "id": "1",
+    "videoId": "sample-1",
+    "title": "The Mysterious Disappearance of the Roanoke Colony",
+    "slug": "mysterious-disappearance-roanoke-colony",
+    "content": "<h2>The Lost Colony Mystery</h2>\n<p>In 1587, a group of 115 English settlers arrived on Roanoke Island, off the coast of present-day North Carolina. Led by John White, they established what was meant to be England's first permanent settlement in the New World.</p>\n\n<p>When White returned from a supply trip to England in 1590, he found the colony completely abandoned. The only clue was the word \"CROATOAN\" carved into a wooden post. To this day, no one knows what happened to the colonists.</p>\n\n<h2>Theories and Speculation</h2>\n<p>Historians have proposed numerous theories: integration with local Native American tribes, death from disease or famine, attacks, or even attempts to sail back to England. Recent archaeological discoveries have provided tantalizing hints, but the truth remains elusive.</p>\n\n<h2>The Dark Truth</h2>\n<p>Some researchers believe there's more to this story than we've been told. Evidence suggests the colonists may have been involved in secret operations, and their disappearance was no accident...</p>",
+    "excerpt": "The mysterious vanishing of 115 colonists from Roanoke Island in 1590 remains one of America's oldest unsolved mysteries.",
+    "thumbnail": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800",
+    "publishedAt": "2026-06-07T21:28:26.386Z",
+    "createdAt": "2026-06-07T21:28:26.386Z",
+    "updatedAt": "2026-06-07T21:28:26.386Z",
+    "status": "published",
+    "seoTitle": "Roanoke Colony Mystery: What Really Happened to the Lost Colonists?",
+    "seoDescription": "Discover the dark truth behind the mysterious disappearance of the Roanoke Colony in 1590.",
+    "tags": [
+      "mystery",
+      "history",
+      "roanoke",
+      "colonial america"
+    ],
+    "views": 1247,
+    "aiModel": "deepseek"
+  },
+  {
+    "id": "2",
+    "videoId": "sample-2",
+    "title": "Secret Societies That Shaped History",
+    "slug": "secret-societies-shaped-history",
+    "content": "<h2>The Hidden Hand of History</h2>\n<p>Throughout human history, secret societies have operated in the shadows, pulling strings and shaping events in ways most people never realize.</p>\n\n<p>From the Knights Templar to the Illuminati, from Skull and Bones to the Bohemian Grove, these organizations have counted among their members some of the most powerful people in the world.</p>\n\n<h2>Their Influence Today</h2>\n<p>Many believe these societies continue to wield enormous influence over global politics, finance, and culture. The evidence is all around us, hidden in plain sight...</p>",
+    "excerpt": "From the Knights Templar to modern-day power brokers, secret societies have always shaped world events from the shadows.",
+    "thumbnail": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800",
+    "publishedAt": "2026-06-06T21:28:26.386Z",
+    "createdAt": "2026-06-06T21:28:26.386Z",
+    "updatedAt": "2026-06-06T21:28:26.386Z",
+    "status": "published",
+    "seoTitle": "Secret Societies: The Hidden Powers Behind History",
+    "seoDescription": "Explore the secret societies that have shaped world events for centuries.",
+    "tags": [
+      "secret societies",
+      "illuminati",
+      "history",
+      "conspiracy"
+    ],
+    "views": 892,
+    "aiModel": "kimi"
+  },
+  {
+    "id": "3",
+    "videoId": "sample-3",
+    "title": "The Dark Origins of Ancient Cults",
+    "slug": "dark-origins-ancient-cults",
+    "content": "<h2>Cults Through the Ages</h2>\n<p>Long before modern cult leaders, ancient civilizations harbored mysterious religious sects with dark rituals and forbidden knowledge.</p>",
+    "excerpt": "Ancient civilizations harbored mysterious religious sects with dark rituals and forbidden knowledge that still influence us today.",
+    "thumbnail": "https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=800",
+    "publishedAt": "2026-06-05T21:28:26.386Z",
+    "createdAt": "2026-06-05T21:28:26.386Z",
+    "updatedAt": "2026-06-05T21:28:26.386Z",
+    "status": "draft",
+    "tags": [
+      "cults",
+      "ancient history",
+      "religion",
+      "rituals"
+    ],
+    "views": 0,
+    "aiModel": "glm"
+  }
+]

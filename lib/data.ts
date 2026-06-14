@@ -1,170 +1,252 @@
-import type { BlogPost, Video, DashboardStats, ChannelConfig } from './types'
+import type { BlogPost, Video, ChannelConfig, DashboardStats } from './types'
+import {
+  loadPosts,
+  savePosts,
+  loadVideos,
+  saveVideos,
+  loadChannelConfig,
+  saveChannelConfig,
+  loadSettings,
+  saveSettings,
+} from './storage'
+import {
+  initDatabase,
+  isDbAvailable,
+  dbGetPosts,
+  dbGetPostById,
+  dbGetPostBySlug,
+  dbGetPublishedPosts,
+  dbCreatePost,
+  dbUpdatePost,
+  dbDeletePost,
+  dbGetVideos,
+  dbAddVideo,
+  dbGetChannelConfig,
+  dbUpdateChannelConfig,
+  dbGetSettings,
+  dbSaveSettings,
+  dbGetStats,
+} from './db'
 
-// In-memory storage
-let posts: BlogPost[] = [
-  {
-    id: '1',
-    videoId: 'sample-1',
-    title: 'The Mysterious Disappearance of the Roanoke Colony',
-    slug: 'mysterious-disappearance-roanoke-colony',
-    content: `<h2>The Lost Colony Mystery</h2>
-<p>In 1587, a group of 115 English settlers arrived on Roanoke Island, off the coast of present-day North Carolina. Led by John White, they established what was meant to be England's first permanent settlement in the New World.</p>
-
-<p>When White returned from a supply trip to England in 1590, he found the colony completely abandoned. The only clue was the word "CROATOAN" carved into a wooden post. To this day, no one knows what happened to the colonists.</p>
-
-<h2>Theories and Speculation</h2>
-<p>Historians have proposed numerous theories: integration with local Native American tribes, death from disease or famine, attacks, or even attempts to sail back to England. Recent archaeological discoveries have provided tantalizing hints, but the truth remains elusive.</p>
-
-<h2>The Dark Truth</h2>
-<p>Some researchers believe there's more to this story than we've been told. Evidence suggests the colonists may have been involved in secret operations, and their disappearance was no accident...</p>`,
-    excerpt: 'The mysterious vanishing of 115 colonists from Roanoke Island in 1590 remains one of America\'s oldest unsolved mysteries.',
-    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    status: 'published',
-    seoTitle: 'Roanoke Colony Mystery: What Really Happened to the Lost Colonists?',
-    seoDescription: 'Discover the dark truth behind the mysterious disappearance of the Roanoke Colony in 1590.',
-    tags: ['mystery', 'history', 'roanoke', 'colonial america'],
-    views: 1247,
-    aiModel: 'deepseek'
-  },
-  {
-    id: '2',
-    videoId: 'sample-2',
-    title: 'Secret Societies That Shaped History',
-    slug: 'secret-societies-shaped-history',
-    content: `<h2>The Hidden Hand of History</h2>
-<p>Throughout human history, secret societies have operated in the shadows, pulling strings and shaping events in ways most people never realize.</p>
-
-<p>From the Knights Templar to the Illuminati, from Skull and Bones to the Bohemian Grove, these organizations have counted among their members some of the most powerful people in the world.</p>
-
-<h2>Their Influence Today</h2>
-<p>Many believe these societies continue to wield enormous influence over global politics, finance, and culture. The evidence is all around us, hidden in plain sight...</p>`,
-    excerpt: 'From the Knights Templar to modern-day power brokers, secret societies have always shaped world events from the shadows.',
-    thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
-    publishedAt: new Date(Date.now() - 86400000).toISOString(),
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    status: 'published',
-    seoTitle: 'Secret Societies: The Hidden Powers Behind History',
-    seoDescription: 'Explore the secret societies that have shaped world events for centuries.',
-    tags: ['secret societies', 'illuminati', 'history', 'conspiracy'],
-    views: 892,
-    aiModel: 'kimi'
-  },
-  {
-    id: '3',
-    videoId: 'sample-3',
-    title: 'The Dark Origins of Ancient Cults',
-    slug: 'dark-origins-ancient-cults',
-    content: `<h2>Cults Through the Ages</h2>
-<p>Long before modern cult leaders, ancient civilizations harbored mysterious religious sects with dark rituals and forbidden knowledge.</p>`,
-    excerpt: 'Ancient civilizations harbored mysterious religious sects with dark rituals and forbidden knowledge that still influence us today.',
-    thumbnail: 'https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=800',
-    publishedAt: new Date(Date.now() - 172800000).toISOString(),
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    updatedAt: new Date(Date.now() - 172800000).toISOString(),
-    status: 'draft',
-    tags: ['cults', 'ancient history', 'religion', 'rituals'],
-    views: 0,
-    aiModel: 'glm'
-  }
-]
-
-let videos: Video[] = [
-  {
-    id: 'vid-1',
-    title: 'What Really Happened at Dyatlov Pass?',
-    description: 'Exploring the mysterious deaths of 9 hikers in 1959',
-    thumbnail: 'https://images.unsplash.com/photo-1478827536114-da961b7f86d2?w=400',
-    publishedAt: new Date().toISOString(),
-    channelTitle: 'Dark History Channel',
-    videoUrl: 'https://youtube.com/watch?v=example1'
-  },
-  {
-    id: 'vid-2',
-    title: 'The Curse of the Hope Diamond',
-    description: 'The dark history of the world\'s most famous gem',
-    thumbnail: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400',
-    publishedAt: new Date(Date.now() - 86400000).toISOString(),
-    channelTitle: 'Dark History Channel',
-    videoUrl: 'https://youtube.com/watch?v=example2'
-  }
-]
-
+// In-memory cache with file-backed persistence
+let posts: BlogPost[] = []
+let videos: Video[] = []
 let channelConfig: ChannelConfig = {
   channelId: '',
   channelName: '',
   channelUrl: '',
-  autoProcess: false
+  autoProcess: false,
+}
+
+let initialized = false
+let useDatabase = false
+let initError: string | null = null
+let initPromise: Promise<void> | null = null
+
+async function ensureInitialized() {
+  if (initialized) return
+  if (initPromise) {
+    await initPromise
+    return
+  }
+
+  initPromise = (async () => {
+    // Try database first
+    try {
+      await initDatabase()
+      if (isDbAvailable()) {
+        posts = await dbGetPosts()
+        videos = await dbGetVideos()
+        channelConfig = await dbGetChannelConfig()
+        useDatabase = true
+        initialized = true
+        return
+      }
+    } catch (error) {
+      console.log('Database not available, using file storage:', error)
+    }
+
+    // Fallback to file storage
+    try {
+      posts = await loadPosts()
+      videos = await loadVideos()
+      channelConfig = await loadChannelConfig()
+      useDatabase = false
+      initialized = true
+    } catch (error) {
+      console.error('File storage initialization failed:', error)
+      initError = error instanceof Error ? error.message : 'Unknown error'
+      initialized = true
+      useDatabase = false
+      posts = []
+      videos = []
+      channelConfig = {
+        channelId: '',
+        channelName: '',
+        channelUrl: '',
+        autoProcess: false,
+      }
+    }
+  })()
+
+  await initPromise
 }
 
 // Data access functions
-export function getPosts(): BlogPost[] {
-  return posts
+export async function getPosts(): Promise<BlogPost[]> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetPosts()
+  }
+  return [...posts]
 }
 
-export function getAllPosts(): BlogPost[] {
-  return posts
+export async function getAllPosts(): Promise<BlogPost[]> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetPosts()
+  }
+  return [...posts]
 }
 
-export function getPostById(id: string): BlogPost | undefined {
+export async function getPostById(id: string): Promise<BlogPost | undefined> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetPostById(id)
+  }
   return posts.find(p => p.id === id)
 }
 
-export function getPostBySlug(slug: string): BlogPost | undefined {
+export async function getPostBySlug(slug: string): Promise<BlogPost | undefined> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetPostBySlug(slug)
+  }
   return posts.find(p => p.slug === slug)
 }
 
-export function getPublishedPosts(): BlogPost[] {
-  return posts.filter(p => p.status === 'published').sort((a, b) =>
-    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  )
+export async function getPublishedPosts(): Promise<BlogPost[]> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetPublishedPosts()
+  }
+  return posts
+    .filter(p => p.status === 'published')
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 }
 
-export function createPost(post: Omit<BlogPost, 'id'>): BlogPost {
+export async function createPost(post: Omit<BlogPost, 'id'>): Promise<BlogPost> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbCreatePost(post)
+  }
   const now = new Date().toISOString()
-  const newPost = { ...post, id: crypto.randomUUID(), createdAt: post.createdAt || now, updatedAt: now }
+  const newPost: BlogPost = {
+    ...post,
+    id: crypto.randomUUID(),
+    createdAt: post.createdAt || now,
+    updatedAt: now,
+  }
   posts.push(newPost)
+  await savePosts(posts)
   return newPost
 }
 
-export function updatePost(id: string, updates: Partial<BlogPost>): BlogPost | null {
+export async function updatePost(id: string, updates: Partial<BlogPost>): Promise<BlogPost | null> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbUpdatePost(id, updates)
+  }
   const index = posts.findIndex(p => p.id === id)
   if (index === -1) return null
   posts[index] = { ...posts[index], ...updates, updatedAt: new Date().toISOString() }
+  await savePosts(posts)
   return posts[index]
 }
 
-export function deletePost(id: string): boolean {
+export async function deletePost(id: string): Promise<boolean> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbDeletePost(id)
+  }
   const index = posts.findIndex(p => p.id === id)
   if (index === -1) return false
   posts.splice(index, 1)
+  await savePosts(posts)
   return true
 }
 
-export function getVideos(): Video[] {
-  return videos
+export async function getVideos(): Promise<Video[]> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetVideos()
+  }
+  return [...videos]
 }
 
-export function addVideo(video: Video): void {
+export async function addVideo(video: Video): Promise<Video> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbAddVideo(video)
+  }
   videos.push(video)
+  await saveVideos(videos)
+  return video
 }
 
-export function getChannelConfig(): ChannelConfig {
-  return channelConfig
+export async function getChannelConfig(): Promise<ChannelConfig> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetChannelConfig()
+  }
+  return { ...channelConfig }
 }
 
-export function updateChannelConfig(config: Partial<ChannelConfig>): ChannelConfig {
+export async function updateChannelConfig(config: Partial<ChannelConfig>): Promise<ChannelConfig> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbUpdateChannelConfig(config)
+  }
   channelConfig = { ...channelConfig, ...config }
-  return channelConfig
+  await saveChannelConfig(channelConfig)
+  return { ...channelConfig }
 }
 
-export function getStats(): DashboardStats {
+export async function getSettings(): Promise<Record<string, unknown>> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetSettings()
+  }
+  return await loadSettings()
+}
+
+export async function saveSettingsData(settings: Record<string, unknown>): Promise<void> {
+  await ensureInitialized()
+  if (useDatabase) {
+    await dbSaveSettings(settings)
+    return
+  }
+  await saveSettings(settings)
+}
+
+export async function getStats(): Promise<DashboardStats> {
+  await ensureInitialized()
+  if (useDatabase) {
+    return dbGetStats()
+  }
+  if (!Array.isArray(posts) || !Array.isArray(videos)) {
+    return {
+      totalVideos: 0,
+      totalPosts: 0,
+      publishedPosts: 0,
+      draftPosts: 0,
+      totalViews: 0,
+      thisMonthViews: 0,
+    }
+  }
   const published = posts.filter(p => p.status === 'published')
   const drafts = posts.filter(p => p.status === 'draft')
-  const totalViews = posts.reduce((sum, p) => sum + p.views, 0)
+  const totalViews = posts.reduce((sum, p) => sum + (typeof p.views === 'number' ? p.views : 0), 0)
 
   const thisMonthViews = Math.floor(totalViews * 0.4)
 
@@ -174,6 +256,8 @@ export function getStats(): DashboardStats {
     publishedPosts: published.length,
     draftPosts: drafts.length,
     totalViews,
-    thisMonthViews
+    thisMonthViews,
   }
 }
+
+export { isDbAvailable } from './db'

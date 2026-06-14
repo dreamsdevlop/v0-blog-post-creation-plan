@@ -1,0 +1,17 @@
+{
+  "NEXT_PUBLIC_SITE_URL": "https://your-app.vercel.app",
+  "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/dark_chronicles?schema=public",
+  "GOOGLE_CLIENT_ID": "your-google-client-id",
+  "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
+  "BLOGGER_BLOG_ID": "your-blogger-blog-id",
+  "YOUTUBE_API_KEY": "your-youtube-api-key",
+  "NVIDIA_API_KEY_1": "your-nvidia-api-key-1",
+  "NVIDIA_API_KEY_2": "your-nvidia-api-key-2",
+  "NVIDIA_API_KEY_3": "your-nvidia-api-key-3",
+  "NVIDIA_API_KEY_4": "your-nvidia-api-key-4",
+  "NVIDIA_IMAGE_API_KEY": "your-nvidia-image-api-key",
+  "NVIDIA_IMAGE_API_KEY_2": "your-nvidia-image-api-key-2",
+  "NVIDIA_IMAGE_API_KEY_3": "your-nvidia-image-api-key-3",
+  "NVIDIA_IMAGE_API_KEY_4": "your-nvidia-image-api-key-4",
+  "CRON_SECRET": "your-cron-secret"
+}
