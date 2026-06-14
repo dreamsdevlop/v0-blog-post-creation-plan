@@ -13,23 +13,23 @@ const NVIDIA_API_KEYS = [
 ].filter((key): key is string => Boolean(key))
 
 const MODEL_ENDPOINTS: Record<string, string> = {
-  deepseek: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  kimi: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  glm: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  stepfun: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  flux: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  sd: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  llama: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  deepseek: 'https://ai.api.nvidia.com/v1/vlm/community/deepseek-coder-6.7b-instruct',
+  kimi: 'https://ai.api.nvidia.com/v1/vlm/community/kimi-v0.1-16k',
+  glm: 'https://ai.api.nvidia.com/v1/vlm/community/glm-v1.0-13b',
+  stepfun: 'https://ai.api.nvidia.com/v1/vlm/community/stepfun-v1-4k',
+  flux: 'https://ai.api.nvidia.com/v1/vlm/community/flux-v1-8b',
+  sd: 'https://ai.api.nvidia.com/v1/vlm/community/stable-diffusion-xl-base-1.0',
+  llama: 'https://ai.api.nvidia.com/v1/vlm/community/llama-2-7b-chat',
 }
 
 const MODEL_IDS: Record<string, string> = {
-  deepseek: 'deepseek-ai/deepseek-r1',
-  kimi: 'moonshot-ai/kimi-k2-instruct',
-  glm: 'thudm/glm-4',
-  stepfun: 'stepfun-ai/step-2-16k',
-  flux: 'black-forest-labs/flux-schnell',
-  sd: 'stabilityai/stable-diffusion-3.5-large',
-  llama: 'meta/llama-3.1-405b-instruct',
+  deepseek: 'community/deepseek-coder-6.7b-instruct',
+  kimi: 'community/kimi-v0.1-16k',
+  glm: 'community/glm-v1.0-13b',
+  stepfun: 'community/stepfun-v1-4k',
+  flux: 'community/flux-v1-8b',
+  sd: 'community/stable-diffusion-xl-base-1.0',
+  llama: 'community/llama-2-7b-chat',
 }
 
 const MODEL_KEY_MAP: Record<string, number> = {
@@ -76,8 +76,8 @@ export async function generateBlogPost(
   settings: GenerationSettings
 ): Promise<{ title: string; content: string; excerpt: string; seoTitle: string; seoDescription: string; tags: string[] }> {
   const apiKey = getApiKey(settings.model)
-  const modelId = MODEL_IDS[settings.model]
   const endpoint = MODEL_ENDPOINTS[settings.model]
+  const modelId = MODEL_IDS[settings.model]
 
   const systemPrompt = `You are an expert blog writer specializing in history, mysteries, dark truths, and cult-related content. Your writing style is captivating and SEO-optimized.
 
@@ -123,7 +123,7 @@ ${transcript}
 Generate a captivating blog post that reveals the dark truths and mysteries discussed in this video.`
 
   try {
-    console.log('[NVIDIA AI] Calling model:', modelId, 'endpoint:', endpoint)
+    console.log('[NVIDIA AI] Calling model:', settings.model, 'endpoint:', endpoint)
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
