@@ -102,6 +102,7 @@ ${transcript}
 Generate a captivating blog post that reveals the dark truths and mysteries discussed in this video.`
 
   try {
+    console.log('[NVIDIA AI] Calling model:', modelId, 'endpoint:', endpoint)
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -119,13 +120,18 @@ Generate a captivating blog post that reveals the dark truths and mysteries disc
       }),
     })
 
+    console.log('[NVIDIA AI] Response status:', response.status)
+
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`NVIDIA API error: ${error}`)
+      const errorText = await response.text()
+      console.error('[NVIDIA AI] Error response:', errorText)
+      throw new Error(`NVIDIA API error: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
-    const content = data.choices[0]?.message?.content
+    console.log('[NVIDIA AI] Response data keys:', Object.keys(data))
+    const content = data.choices?.[0]?.message?.content
+    console.log('[NVIDIA AI] Content preview:', content?.slice(0, 200))
 
     // Try to parse as JSON, or extract content
     try {
