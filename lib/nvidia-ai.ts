@@ -13,23 +13,23 @@ const NVIDIA_API_KEYS = [
 ].filter((key): key is string => Boolean(key))
 
 const MODEL_ENDPOINTS: Record<string, string> = {
-  deepseek: 'https://ai.api.nvidia.com/v1/vlm/community/deepseek-coder-6.7b-instruct',
-  kimi: 'https://ai.api.nvidia.com/v1/vlm/community/kimi-v0.1-16k',
-  glm: 'https://ai.api.nvidia.com/v1/vlm/community/glm-v1.0-13b',
-  stepfun: 'https://ai.api.nvidia.com/v1/vlm/community/stepfun-v1-4k',
-  flux: 'https://ai.api.nvidia.com/v1/vlm/community/flux-v1-8b',
-  sd: 'https://ai.api.nvidia.com/v1/vlm/community/stable-diffusion-xl-base-1.0',
-  llama: 'https://ai.api.nvidia.com/v1/vlm/community/llama-2-7b-chat',
+  deepseek: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  kimi: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  glm: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  stepfun: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  flux: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  sd: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  llama: 'https://integrate.api.nvidia.com/v1/chat/completions',
 }
 
 const MODEL_IDS: Record<string, string> = {
-  deepseek: 'community/deepseek-coder-6.7b-instruct',
-  kimi: 'community/kimi-v0.1-16k',
-  glm: 'community/glm-v1.0-13b',
-  stepfun: 'community/stepfun-v1-4k',
-  flux: 'community/flux-v1-8b',
-  sd: 'community/stable-diffusion-xl-base-1.0',
-  llama: 'community/llama-2-7b-chat',
+  deepseek: 'deepseek-ai/deepseek-r1',
+  kimi: 'kimi-v1',
+  glm: 'glm-4',
+  stepfun: 'stepfun-1',
+  flux: 'flux-v1',
+  sd: 'stable-diffusion-xl-base-1.0',
+  llama: 'meta/llama-2-7b-chat',
 }
 
 const MODEL_KEY_MAP: Record<string, number> = {
