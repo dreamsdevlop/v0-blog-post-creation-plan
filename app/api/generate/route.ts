@@ -18,12 +18,16 @@ export async function POST(request: Request) {
       )
     }
     
+    console.log('[Generate] Request received:', { transcriptLength: transcript.length, videoTitle, settings })
     const result = await generateBlogPost(transcript, videoTitle, settings)
+    console.log('[Generate] Success:', result.title)
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Generation error:', error)
+    console.error('[Generate] Error:', error)
+    const message = error instanceof Error ? error.message : 'Generation failed'
+    console.error('[Generate] Error message:', message)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Generation failed' },
+      { error: message },
       { status: 500 }
     )
   }
