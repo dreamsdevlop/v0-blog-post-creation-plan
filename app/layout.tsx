@@ -11,11 +11,18 @@ const geistMono = Geist_Mono({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://darkchronicles.vercel.app'
 
+let metadataBase: URL
+try {
+  metadataBase = new URL(siteUrl)
+} catch {
+  metadataBase = new URL('https://darkchronicles.vercel.app')
+}
+
 export const metadata: Metadata = {
   title: 'Dark Chronicles - History, Mystery & Hidden Truths',
   description: 'Automated blog revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',
   generator: 'v0.app',
-  metadataBase: new URL(siteUrl),
+  metadataBase,
   openGraph: {
     title: 'Dark Chronicles - History, Mystery & Hidden Truths',
     description: 'Revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.',

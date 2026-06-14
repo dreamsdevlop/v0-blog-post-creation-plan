@@ -2,7 +2,7 @@ import type { BlogPost, Video, ChannelConfig } from './types'
 import { promises as fs } from 'fs'
 import path from 'path'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_DIR = path.join('/tmp', 'data')
 const POSTS_FILE = path.join(DATA_DIR, 'posts.json')
 const VIDEOS_FILE = path.join(DATA_DIR, 'videos.json')
 const CHANNEL_FILE = path.join(DATA_DIR, 'channel.json')

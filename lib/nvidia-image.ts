@@ -18,6 +18,24 @@ interface ImageGenerationOptions {
   negativePrompt?: string;
 }
 
+const NVIDIA_IMAGE_API_KEYS = [
+  process.env.NVIDIA_IMAGE_API_KEY,
+  process.env.NVIDIA_IMAGE_API_KEY_2,
+  process.env.NVIDIA_IMAGE_API_KEY_3,
+  process.env.NVIDIA_IMAGE_API_KEY_4,
+].filter((key): key is string => Boolean(key))
+
+let imageKeyIndex = 0
+
+function getNextImageApiKey(): string {
+  if (NVIDIA_IMAGE_API_KEYS.length === 0) {
+    throw new Error('NVIDIA Image API key not configured')
+  }
+  const key = NVIDIA_IMAGE_API_KEYS[imageKeyIndex % NVIDIA_IMAGE_API_KEYS.length]
+  imageKeyIndex++
+  return key
+}
+
 // Style presets for history/mystery content
 const STYLE_PRESETS: Record<ImageStyle, { prefix: string; suffix: string; negative: string }> = {
   cinematic: {
@@ -89,11 +107,12 @@ export async function generateBlogImage(
   content: string,
   options: Partial<ImageGenerationOptions> = {}
 ): Promise<{ imageUrl: string; style: ImageStyle; prompt: string } | null> {
-  const apiKey = process.env.NVIDIA_IMAGE_API_KEY;
-  
-  if (!apiKey) {
-    console.error("[v0] NVIDIA_IMAGE_API_KEY not configured");
-    return null;
+  let apiKey: string
+  try {
+    apiKey = getNextImageApiKey()
+  } catch (error) {
+    console.error("[v0] NVIDIA Image API key not configured:", error)
+    return null
   }
 
   // Auto-detect style if not specified
@@ -129,7 +148,7 @@ export async function generateBlogImage(
       console.error("[v0] NVIDIA Image API error:", errorText);
       
       // Fallback: Try alternative endpoint format
-      return await generateWithAlternativeEndpoint(prompt, preset.negative, apiKey);
+      return await generateWithAlternativeEndpoint(prompt, preset.negative);
     }
 
     const data = await response.json();
@@ -160,10 +179,15 @@ export async function generateBlogImage(
 
 // Alternative endpoint for different NVIDIA API versions
 async function generateWithAlternativeEndpoint(
-  prompt: string, 
-  negativePrompt: string,
-  apiKey: string
+  prompt: string,
+  negativePrompt: string
 ): Promise<{ imageUrl: string; style: ImageStyle; prompt: string } | null> {
+  let apiKey: string
+  try {
+    apiKey = getNextImageApiKey()
+  } catch {
+    return null
+  }
   try {
     // Try the NVIDIA AI Foundation endpoint
     const response = await fetch("https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl", {

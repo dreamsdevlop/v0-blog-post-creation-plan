@@ -234,11 +234,15 @@ export async function getStats(): Promise<DashboardStats> {
   if (useDatabase) {
     return dbGetStats()
   }
-  if (initError) {
-    throw new Error(`Storage initialization failed: ${initError}`)
-  }
   if (!Array.isArray(posts) || !Array.isArray(videos)) {
-    throw new Error('Invalid data state: posts or videos is not an array')
+    return {
+      totalVideos: 0,
+      totalPosts: 0,
+      publishedPosts: 0,
+      draftPosts: 0,
+      totalViews: 0,
+      thisMonthViews: 0,
+    }
   }
   const published = posts.filter(p => p.status === 'published')
   const drafts = posts.filter(p => p.status === 'draft')

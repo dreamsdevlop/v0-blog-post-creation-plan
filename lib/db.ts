@@ -9,8 +9,20 @@ export async function initDatabase() {
     return
   }
 
-  const sql = getSql()
-  if (!sql) return
+  let sql: ReturnType<typeof getSql> | null = null
+  try {
+    sql = getSql()
+  } catch (error) {
+    console.error('Database client initialization error, falling back to file storage:', error)
+    dbAvailable = false
+    return
+  }
+
+  if (!sql) {
+    console.log('SQL client is null, using file-based storage')
+    dbAvailable = false
+    return
+  }
 
   try {
     await sql`
@@ -264,11 +276,13 @@ export async function dbGetChannelConfig(): Promise<ChannelConfig> {
   }
 
   const sql = getSql()
-  if (!sql) return {
-    channelId: '',
-    channelName: '',
-    channelUrl: '',
-    autoProcess: false,
+  if (!sql) {
+    return {
+      channelId: '',
+      channelName: '',
+      channelUrl: '',
+      autoProcess: false,
+    }
   }
 
   const rows = (await sql`SELECT * FROM channel_config LIMIT 1`) as Record<string, unknown>[]
@@ -321,7 +335,9 @@ export async function dbGetSettings(): Promise<Record<string, unknown>> {
   }
 
   const sql = getSql()
-  if (!sql) return {}
+  if (!sql) {
+    return {}
+  }
 
   const rows = (await sql`SELECT key, value FROM settings`) as { key: string; value: unknown }[]
   const settings: Record<string, unknown> = {}
@@ -355,28 +371,42 @@ export async function dbGetStats() {
   }
 
   const sql = getSql()
-  if (!sql) return {
-    totalVideos: 0,
-    totalPosts: 0,
-    publishedPosts: 0,
-    draftPosts: 0,
-    totalViews: 0,
-    thisMonthViews: 0,
+  if (!sql) {
+    return {
+      totalVideos: 0,
+      totalPosts: 0,
+      publishedPosts: 0,
+      draftPosts: 0,
+      totalViews: 0,
+      thisMonthViews: 0,
+    }
   }
 
-  const posts = await dbGetPosts()
-  const published = posts.filter(p => p.status === 'published')
-  const drafts = posts.filter(p => p.status === 'draft')
-  const totalViews = posts.reduce((sum, p) => sum + p.views, 0)
-  const thisMonthViews = Math.floor(totalViews * 0.4)
+  try {
+    const posts = await dbGetPosts()
+    const published = posts.filter(p => p.status === 'published')
+    const drafts = posts.filter(p => p.status === 'draft')
+    const totalViews = posts.reduce((sum, p) => sum + p.views, 0)
+    const thisMonthViews = Math.floor(totalViews * 0.4)
 
-  return {
-    totalVideos: 0,
-    totalPosts: posts.length,
-    publishedPosts: published.length,
-    draftPosts: drafts.length,
-    totalViews,
-    thisMonthViews,
+    return {
+      totalVideos: 0,
+      totalPosts: posts.length,
+      publishedPosts: published.length,
+      draftPosts: drafts.length,
+      totalViews,
+      thisMonthViews,
+    }
+  } catch (error) {
+    console.error('Failed to fetch stats from database, returning empty stats:', error)
+    return {
+      totalVideos: 0,
+      totalPosts: 0,
+      publishedPosts: 0,
+      draftPosts: 0,
+      totalViews: 0,
+      thisMonthViews: 0,
+    }
   }
 }
 
