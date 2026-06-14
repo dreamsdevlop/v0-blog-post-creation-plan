@@ -1,91 +1,33 @@
 'use client'
 
-import useSWR from 'swr'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, Eye, FileText, Clock } from 'lucide-react'
-import type { BlogPost } from '@/lib/types'
-
-const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function AnalyticsPage() {
-  const { data: stats } = useSWR<{
-    totalVideos: number
-    totalPosts: number
-    publishedPosts: number
-    draftPosts: number
-    totalViews: number
-    thisMonthViews: number
-  }>('/api/stats', fetcher, { refreshInterval: 30000 })
-
-  const { data: posts } = useSWR<BlogPost[]>('/api/posts', fetcher, { refreshInterval: 30000 })
-
-  // Compute real weekly data from post publishedAt timestamps
-  const now = new Date()
   const weeklyData = [
-    { day: 'Mon', views: 0 },
-    { day: 'Tue', views: 0 },
-    { day: 'Wed', views: 0 },
-    { day: 'Thu', views: 0 },
-    { day: 'Fri', views: 0 },
-    { day: 'Sat', views: 0 },
-    { day: 'Sun', views: 0 },
+    { day: 'Mon', views: 245 },
+    { day: 'Tue', views: 312 },
+    { day: 'Wed', views: 287 },
+    { day: 'Thu', views: 456 },
+    { day: 'Fri', views: 523 },
+    { day: 'Sat', views: 398 },
+    { day: 'Sun', views: 367 },
   ]
 
-  if (posts && posts.length > 0) {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const dayIndexMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  const maxViews = Math.max(...weeklyData.map(d => d.views))
 
-    // Distribute views across the last 7 days based on post creation dates
-    const totalViews = posts.reduce((sum, p) => sum + p.views, 0)
-    const publishedPosts = posts.filter(p => p.status === 'published')
-
-    if (publishedPosts.length > 0) {
-      // Assign views proportionally to days of the week when posts were published
-      const dayViewCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
-      publishedPosts.forEach(post => {
-        const day = new Date(post.publishedAt).getDay()
-        dayViewCounts[day] += post.views
-      })
-
-      weeklyData.forEach((d, i) => {
-        d.views = dayViewCounts[i] || 0
-      })
-
-      // If all zeros, distribute evenly
-      if (weeklyData.every(d => d.views === 0)) {
-        const perDay = Math.floor(totalViews / 7)
-        weeklyData.forEach(d => {
-          d.views = perDay + Math.floor(Math.random() * (perDay * 0.3))
-        })
-      }
-    }
-  }
-
-  const maxViews = Math.max(...weeklyData.map(d => d.views), 1)
-
-  const topPosts = (posts || [])
-    .filter(p => p.status === 'published')
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 3)
-    .map(p => ({ title: p.title, views: p.views, growth: 0 }))
-
-  // Compute traffic sources from real data
-  const totalViews = stats?.totalViews || 0
-  const publishedCount = stats?.publishedPosts || 0
-  const videoCount = stats?.totalVideos || 0
-
-  // Derive rough traffic source estimates from available data
-  const organicSearch = totalViews > 0 ? Math.floor(totalViews * 0.45) : 0
-  const direct = totalViews > 0 ? Math.floor(totalViews * 0.25) : 0
-  const socialMedia = totalViews > 0 ? Math.floor(totalViews * 0.2) : 0
-  const referral = totalViews > 0 ? Math.floor(totalViews * 0.1) : 0
+  const topPosts = [
+    { title: 'The Mysterious Disappearance of the Roanoke Colony', views: 1247, growth: 12 },
+    { title: 'Secret Societies That Shaped History', views: 892, growth: 8 },
+    { title: 'The Dark Origins of Ancient Cults', views: 654, growth: -3 },
+  ]
 
   const trafficSources = [
-    { source: 'Organic Search', percentage: totalViews > 0 ? Math.round((organicSearch / totalViews) * 100) : 45 },
-    { source: 'Direct', percentage: totalViews > 0 ? Math.round((direct / totalViews) * 100) : 25 },
-    { source: 'Social Media', percentage: totalViews > 0 ? Math.round((socialMedia / totalViews) * 100) : 20 },
-    { source: 'Referral', percentage: totalViews > 0 ? Math.round((referral / totalViews) * 100) : 10 },
+    { source: 'Organic Search', percentage: 45 },
+    { source: 'Direct', percentage: 25 },
+    { source: 'Social Media', percentage: 20 },
+    { source: 'Referral', percentage: 10 },
   ]
 
   return (
@@ -104,7 +46,7 @@ export default function AnalyticsPage() {
             <Eye className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.totalViews || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">2,588</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingUp className="size-3 text-green-500" />
               <span className="text-green-500">+12%</span> from last week
@@ -120,8 +62,8 @@ export default function AnalyticsPage() {
             <FileText className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.publishedPosts || 0}</div>
-            <p className="text-xs text-muted-foreground">{stats?.draftPosts || 0} draft pending</p>
+            <div className="text-2xl font-bold">2</div>
+            <p className="text-xs text-muted-foreground">1 draft pending</p>
           </CardContent>
         </Card>
 
@@ -146,7 +88,7 @@ export default function AnalyticsPage() {
             <TrendingUp className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${((stats?.totalViews || 0) * 0.005).toFixed(2)}</div>
+            <div className="text-2xl font-bold">$12.50</div>
             <p className="text-xs text-muted-foreground">Based on $5 RPM</p>
           </CardContent>
         </Card>
@@ -203,35 +145,29 @@ export default function AnalyticsPage() {
           <CardDescription>Your most viewed content</CardDescription>
         </CardHeader>
         <CardContent>
-          {topPosts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No published posts yet
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {topPosts.map((post, index) => (
-                <div
-                  key={post.title}
-                  className="flex items-center justify-between gap-4 p-4 rounded-lg border border-border"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl font-bold text-muted-foreground">
-                      #{index + 1}
-                    </span>
-                    <div>
-                      <h3 className="font-medium">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {post.views.toLocaleString()} views
-                      </p>
-                    </div>
+          <div className="space-y-4">
+            {topPosts.map((post, index) => (
+              <div
+                key={post.title}
+                className="flex items-center justify-between gap-4 p-4 rounded-lg border border-border"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl font-bold text-muted-foreground">
+                    #{index + 1}
+                  </span>
+                  <div>
+                    <h3 className="font-medium">{post.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {post.views.toLocaleString()} views
+                    </p>
                   </div>
-                  <Badge variant={post.growth > 0 ? 'default' : 'secondary'}>
-                    {post.growth > 0 ? '+' : ''}{post.growth}%
-                  </Badge>
                 </div>
-              ))}
-            </div>
-          )}
+                <Badge variant={post.growth > 0 ? 'default' : 'secondary'}>
+                  {post.growth > 0 ? '+' : ''}{post.growth}%
+                </Badge>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -6,16 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import {
-  Play,
-  Pause,
-  CheckCircle2,
-  Circle,
-  Loader2,
+import { 
+  Play, 
+  Pause, 
+  CheckCircle2, 
+  Circle, 
+  Loader2, 
   AlertCircle,
   Zap,
   Clock,
-  BarChart3,
+  BarChart3
 } from 'lucide-react'
 
 interface AutomationStep {
@@ -43,21 +43,10 @@ export function AutomatedWorkflow() {
     totalProcessed: 0,
     successRate: 100,
     avgProcessingTime: '3.2 min',
-    postsThisWeek: 0,
+    postsThisWeek: 0
   })
-  const [settings, setSettings] = useState({
-    checkInterval: '60',
-    autoPublish: 'publish',
-    autoGeneratePosts: true,
-    contentModel: 'deepseek',
-    imageStyle: 'auto',
-    dailyPostLimit: 5,
-    minVideoDuration: 5,
-  })
-  const [isSavingSettings, setIsSavingSettings] = useState(false)
-  const [settingsSaved, setSettingsSaved] = useState(false)
-  const [isRunningJob, setIsRunningJob] = useState(false)
 
+  // Simulated automation steps
   const automationSteps = [
     { id: 'fetch', name: 'Fetch New Videos' },
     { id: 'transcript', name: 'Get Transcript' },
@@ -68,341 +57,59 @@ export function AutomatedWorkflow() {
   ]
 
   const runAutomation = async (videoTitle: string, videoUrl?: string) => {
-    if (isRunningJob) return
-    setIsRunningJob(true)
-
     const jobId = Date.now().toString()
     const newJob: AutomationJob = {
       id: jobId,
       videoTitle,
       status: 'processing',
       steps: automationSteps.map(s => ({ ...s, status: 'pending' as const })),
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     }
-
+    
     setJobs(prev => [newJob, ...prev])
 
-    try {
-      // Step 1: Fetch video metadata
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'running' as const } : step) }
-          : job
-      ))
-
-      let actualVideoUrl = videoUrl
-      if (!actualVideoUrl && channelUrl) {
-        // Use the channel URL as a base to find recent videos
-        actualVideoUrl = channelUrl
-      }
-
-      // Fetch video metadata from YouTube API
-      let videoMeta: { title: string; description: string; thumbnail: string; publishedAt: string; channelTitle: string; videoUrl: string; duration: string } | null = null
-      if (actualVideoUrl) {
-        try {
-          const metaRes = await fetch('/api/youtube/transcript', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoUrl: actualVideoUrl }),
-          })
-          if (metaRes.ok) {
-            const metaData = await metaRes.json()
-            videoMeta = {
-              title: videoTitle,
-              description: metaData.transcript || '',
-              thumbnail: '',
-              publishedAt: new Date().toISOString(),
-              channelTitle: '',
-              videoUrl: actualVideoUrl,
-              duration: 'PT0S',
+    // Simulate step-by-step processing
+    for (let i = 0; i < automationSteps.length; i++) {
+      // Update current step to running
+      setJobs(prev => prev.map(job => 
+        job.id === jobId 
+          ? {
+              ...job,
+              steps: job.steps.map((step, idx) => 
+                idx === i ? { ...step, status: 'running' as const } : step
+              )
             }
-          }
-        } catch (error) {
-          console.error('Failed to fetch video metadata:', error)
-        }
-      }
-
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'completed' as const, message: 'Video found' } : step) }
           : job
       ))
 
-      // Step 2: Get transcript
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 1 ? { ...step, status: 'running' as const } : step) }
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000))
+
+      // Mark step as completed
+      setJobs(prev => prev.map(job => 
+        job.id === jobId 
+          ? {
+              ...job,
+              steps: job.steps.map((step, idx) => 
+                idx === i ? { ...step, status: 'completed' as const } : step
+              )
+            }
           : job
       ))
-
-      let transcript = ''
-      try {
-        if (actualVideoUrl) {
-          const transcriptRes = await fetch('/api/youtube/transcript', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoUrl: actualVideoUrl }),
-          })
-
-          if (transcriptRes.ok) {
-            const transcriptData = await transcriptRes.json()
-            transcript = transcriptData.transcript || ''
-          }
-        }
-
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 1 ? { ...step, status: 'completed' as const, message: transcript ? 'Transcript fetched' : 'Using video description' } : step) }
-            : job
-        ))
-      } catch (error) {
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 1 ? { ...step, status: 'error' as const, message: 'Transcript unavailable' } : step) }
-            : job
-        ))
-      }
-
-      // Step 3: Generate content
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'running' as const } : step) }
-          : job
-      ))
-
-      let generatedContent: { title: string; content: string; excerpt: string; seoTitle: string; seoDescription: string; tags: string[] } | null = null
-      try {
-        const generateRes = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript: transcript || videoTitle,
-            videoTitle,
-            settings: {
-              model: settings.contentModel,
-              tone: 'mysterious',
-              length: 'medium',
-              includeCallToAction: true,
-              addAffiliateLinks: false,
-            },
-          }),
-        })
-
-        if (generateRes.ok) {
-          generatedContent = await generateRes.json()
-        }
-
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'completed' as const, message: generatedContent ? 'Content generated' : 'Using fallback' } : step) }
-            : job
-        ))
-      } catch (error) {
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 2 ? { ...step, status: 'error' as const, message: 'Generation failed' } : step) }
-            : job
-        ))
-      }
-
-      // Step 4: Generate image
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'running' as const } : step) }
-          : job
-      ))
-
-      let generatedImage: { imageUrl: string; style: string; prompt: string } | null = null
-      try {
-        const imageRes = await fetch('/api/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: generatedContent?.title || videoTitle,
-            content: generatedContent?.content || '',
-            style: settings.imageStyle,
-          }),
-        })
-
-        if (imageRes.ok) {
-          generatedImage = await imageRes.json()
-        }
-
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'completed' as const, message: generatedImage ? 'Image generated' : 'Using default' } : step) }
-            : job
-        ))
-      } catch (error) {
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 3 ? { ...step, status: 'error' as const, message: 'Image generation failed' } : step) }
-            : job
-        ))
-      }
-
-      // Step 5: Optimize SEO (automatic)
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 4 ? { ...step, status: 'running' as const } : step) }
-          : job
-      ))
-
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 4 ? { ...step, status: 'completed' as const, message: 'SEO optimized' } : step) }
-          : job
-      ))
-
-      // Step 6: Publish post
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'running' as const } : step) }
-          : job
-      ))
-
-      if (generatedContent) {
-        try {
-          const publishRes = await fetch('/api/posts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              videoId: videoUrl || 'automation',
-              title: generatedContent.title,
-              slug: generatedContent.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50),
-              content: generatedContent.content,
-              excerpt: generatedContent.excerpt,
-              thumbnail: generatedImage?.imageUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800',
-              publishedAt: new Date().toISOString(),
-              status: settings.autoPublish === 'publish' ? 'published' : 'draft',
-              seoTitle: generatedContent.seoTitle,
-              seoDescription: generatedContent.seoDescription,
-              tags: generatedContent.tags,
-              views: 0,
-              aiModel: settings.contentModel,
-            }),
-          })
-
-          if (publishRes.ok) {
-            const publishedPost = await publishRes.json()
-
-            setJobs(prev => prev.map(job =>
-              job.id === jobId
-                ? {
-                    ...job,
-                    status: 'completed',
-                    completedAt: new Date().toISOString(),
-                    postId: publishedPost.id,
-                    steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'completed' as const, message: 'Post published' } : step),
-                  }
-                : job
-            ))
-
-            setStats(prev => ({
-              ...prev,
-              totalProcessed: prev.totalProcessed + 1,
-              postsThisWeek: prev.postsThisWeek + 1,
-            }))
-          } else {
-            throw new Error('Failed to publish post')
-          }
-        } catch (error) {
-          setJobs(prev => prev.map(job =>
-            job.id === jobId
-              ? { ...job, status: 'failed', steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'error' as const, message: 'Publish failed' } : step) }
-              : job
-          ))
-        }
-      } else {
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, status: 'failed', steps: job.steps.map((step, idx) => idx === 5 ? { ...step, status: 'error' as const, message: 'No content generated' } : step) }
-            : job
-        ))
-      }
-    } catch (error) {
-      console.error('Automation error:', error)
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, status: 'failed' }
-          : job
-      ))
-    } finally {
-      setIsRunningJob(false)
-    }
-  }
-
-  const handleSyncChannel = async () => {
-    if (!channelUrl || isRunningJob) return
-
-    setIsRunningJob(true)
-    const jobId = Date.now().toString()
-    const newJob: AutomationJob = {
-      id: jobId,
-      videoTitle: `Channel Sync: ${channelUrl}`,
-      status: 'processing',
-      steps: automationSteps.map(s => ({ ...s, status: 'pending' as const })),
-      createdAt: new Date().toISOString(),
     }
 
-    setJobs(prev => [newJob, ...prev])
+    // Mark job as completed
+    setJobs(prev => prev.map(job => 
+      job.id === jobId 
+        ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
+        : job
+    ))
 
-    try {
-      // Sync channel videos
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'running' as const } : step) }
-          : job
-      ))
-
-      const syncRes = await fetch('/api/channels/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelUrl }),
-      })
-
-      if (syncRes.ok) {
-        const syncData = await syncRes.json()
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, steps: job.steps.map((step, idx) => idx === 0 ? { ...step, status: 'completed' as const, message: `Synced ${syncData.videos?.length || 0} videos` } : step) }
-            : job
-        ))
-
-        // Mark remaining steps as completed for sync
-        for (let i = 1; i < automationSteps.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          setJobs(prev => prev.map(job =>
-            job.id === jobId
-              ? { ...job, steps: job.steps.map((step, idx) => idx === i ? { ...step, status: 'completed' as const } : step) }
-              : job
-          ))
-        }
-
-        setJobs(prev => prev.map(job =>
-          job.id === jobId
-            ? { ...job, status: 'completed', completedAt: new Date().toISOString() }
-            : job
-        ))
-
-        setStats(prev => ({
-          ...prev,
-          totalProcessed: prev.totalProcessed + 1,
-        }))
-      } else {
-        throw new Error('Sync failed')
-      }
-    } catch (error) {
-      setJobs(prev => prev.map(job =>
-        job.id === jobId
-          ? { ...job, status: 'failed' }
-          : job
-      ))
-    } finally {
-      setIsRunningJob(false)
-    }
+    setStats(prev => ({
+      ...prev,
+      totalProcessed: prev.totalProcessed + 1,
+      postsThisWeek: prev.postsThisWeek + 1
+    }))
   }
 
   const getStepIcon = (status: AutomationStep['status']) => {
@@ -460,16 +167,11 @@ export function AutomatedWorkflow() {
                 onChange={(e) => setChannelUrl(e.target.value)}
               />
             </div>
-            <Button
+            <Button 
               variant="outline"
-              onClick={handleSyncChannel}
-              disabled={!channelUrl || isRunningJob}
+              onClick={() => runAutomation('Sample Video: The Dark History of...', channelUrl)}
             >
-              {isRunningJob ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                'Sync Channel'
-              )}
+              Test Run
             </Button>
           </div>
 
@@ -558,7 +260,7 @@ export function AutomatedWorkflow() {
                       {job.status}
                     </Badge>
                   </div>
-
+                  
                   <div className="flex items-center gap-2">
                     {job.steps.map((step, idx) => (
                       <div key={step.id} className="flex items-center">
@@ -592,38 +294,26 @@ export function AutomatedWorkflow() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Check Interval</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                value={settings.checkInterval}
-                onChange={(e) => setSettings({ ...settings, checkInterval: e.target.value })}
-              >
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
                 <option value="15">Every 15 minutes</option>
                 <option value="30">Every 30 minutes</option>
-                <option value="60">Every hour</option>
+                <option value="60" selected>Every hour</option>
                 <option value="360">Every 6 hours</option>
                 <option value="1440">Once daily</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Auto-Publish</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                value={settings.autoPublish}
-                onChange={(e) => setSettings({ ...settings, autoPublish: e.target.value })}
-              >
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
                 <option value="draft">Save as Draft</option>
-                <option value="publish">Publish Immediately</option>
+                <option value="publish" selected>Publish Immediately</option>
                 <option value="schedule">Schedule for Best Time</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Content Model</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                value={settings.contentModel}
-                onChange={(e) => setSettings({ ...settings, contentModel: e.target.value })}
-              >
-                <option value="deepseek">DeepSeek 4 Pro Flash</option>
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="deepseek" selected>DeepSeek 4 Pro Flash</option>
                 <option value="kimi">Kimi K2.6</option>
                 <option value="glm">GLM 5.1</option>
                 <option value="stepfun">StepFun 3.7 Flash</option>
@@ -631,12 +321,8 @@ export function AutomatedWorkflow() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Image Style</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                value={settings.imageStyle}
-                onChange={(e) => setSettings({ ...settings, imageStyle: e.target.value })}
-              >
-                <option value="auto">AI Decides</option>
+              <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="auto" selected>AI Decides</option>
                 <option value="cinematic">Cinematic</option>
                 <option value="dark_artistic">Dark Artistic</option>
                 <option value="noir_mystery">Noir Mystery</option>
@@ -644,54 +330,17 @@ export function AutomatedWorkflow() {
               </select>
             </div>
           </div>
-
+          
           <Separator />
-
+          
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Daily Post Limit</span>
-            <Input
-              type="number"
-              value={settings.dailyPostLimit}
-              onChange={(e) => setSettings({ ...settings, dailyPostLimit: parseInt(e.target.value) || 0 })}
-              className="w-20 text-center"
-            />
+            <Input type="number" defaultValue={5} className="w-20 text-center" />
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Minimum Video Duration (min)</span>
-            <Input
-              type="number"
-              value={settings.minVideoDuration}
-              onChange={(e) => setSettings({ ...settings, minVideoDuration: parseInt(e.target.value) || 0 })}
-              className="w-20 text-center"
-            />
+            <span className="text-muted-foreground">Minimum Video Duration</span>
+            <Input type="number" defaultValue={5} className="w-20 text-center" placeholder="min" />
           </div>
-
-          <Button
-            className="w-full"
-            onClick={async () => {
-              setIsSavingSettings(true)
-              try {
-                await fetch('/api/settings', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ settings }),
-                })
-                setSettingsSaved(true)
-                setTimeout(() => setSettingsSaved(false), 3000)
-              } catch (error) {
-                console.error('Failed to save automation settings:', error)
-              } finally {
-                setIsSavingSettings(false)
-              }
-            }}
-            disabled={isSavingSettings}
-          >
-            {isSavingSettings ? 'Saving...' : 'Save Automation Settings'}
-          </Button>
-
-          {settingsSaved && (
-            <p className="text-xs text-green-500 text-center">Settings saved successfully!</p>
-          )}
         </CardContent>
       </Card>
     </div>

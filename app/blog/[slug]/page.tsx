@@ -1,112 +1,40 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getPostBySlug, getPublishedPosts } from '@/lib/data'
 import { formatDistanceToNow, format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { BookOpen, Clock, Eye, ArrowLeft, Share2 } from 'lucide-react'
 import type { Metadata } from 'next'
-import type { BlogPost } from '@/lib/types'
 
-function generateJsonLd(post: BlogPost) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.seoTitle || post.title,
-    description: post.seoDescription || post.excerpt,
-    image: post.thumbnail,
-    datePublished: post.publishedAt,
-    dateModified: post.updatedAt || post.publishedAt,
-    author: {
-      '@type': 'Organization',
-      name: 'Dark Chronicles',
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Dark Chronicles',
-      logo: {
-        '@type': 'ImageObject',
-        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/icon.svg`,
-      },
-    },
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/blog/${post.slug}`,
-    },
-    keywords: post.tags.join(', '),
-    wordCount: post.content.replace(/<[^>]*>/g, '').split(/\s+/).length,
-    articleSection: post.tags[0] || 'History',
-    inLanguage: 'en-US',
-  }
-}
-
-async function getPostBySlug(slug: string): Promise<BlogPost | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
-  if (!res.ok) return null
-  const data = await res.json()
-  const posts: BlogPost[] = Array.isArray(data) ? data : []
-  return posts.find((post: BlogPost) => post.slug === slug && post.status === 'published') || null
-}
-
-async function getPublishedPosts(): Promise<BlogPost[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/posts`, { cache: 'no-store' })
-  if (!res.ok) return []
-  const data = await res.json()
-  const posts: BlogPost[] = Array.isArray(data) ? data : []
-  return posts.filter((post: BlogPost) => post.status === 'published').sort((a: BlogPost, b: BlogPost) =>
-    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  )
-}
-
-export async function generateMetadata({
-  params
-}: {
-  params: Promise<{ slug: string }>
+export async function generateMetadata({ 
+  params 
+}: { 
+  params: Promise<{ slug: string }> 
 }): Promise<Metadata> {
   const { slug } = await params
-  const post = await getPostBySlug(slug)
+  const post = getPostBySlug(slug)
   
   if (!post) {
     return { title: 'Post Not Found' }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  const title = post.seoTitle || post.title
-  const description = post.seoDescription || post.excerpt
-
   return {
-    title,
-    description,
-    alternates: {
-      canonical: `${siteUrl}/blog/${post.slug}`,
-    },
+    title: post.seoTitle || post.title,
+    description: post.seoDescription || post.excerpt,
     openGraph: {
-      title,
-      description,
-      url: `${siteUrl}/blog/${post.slug}`,
-      siteName: 'Dark Chronicles',
-      images: [
-        {
-          url: post.thumbnail,
-          width: 1200,
-          height: 630,
-          alt: post.title,
-        },
-      ],
+      title: post.seoTitle || post.title,
+      description: post.seoDescription || post.excerpt,
+      images: [post.thumbnail],
       type: 'article',
       publishedTime: post.publishedAt,
-      modifiedTime: post.updatedAt || post.publishedAt,
-      authors: ['Dark Chronicles'],
-      tags: post.tags,
     },
     twitter: {
       card: 'summary_large_image',
-      title,
-      description,
+      title: post.seoTitle || post.title,
+      description: post.seoDescription || post.excerpt,
       images: [post.thumbnail],
-      creator: '@darkchronicles',
     },
   }
 }
@@ -117,23 +45,18 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }> 
 }) {
   const { slug } = await params
-  const post = await getPostBySlug(slug)
+  const post = getPostBySlug(slug)
   
-  if (!post) {
+  if (!post || post.status !== 'published') {
     notFound()
   }
 
-  const relatedPosts = await getPublishedPosts()
-    .then(posts => posts.filter(p => p.id !== post.id).slice(0, 3))
+  const relatedPosts = getPublishedPosts()
+    .filter(p => p.id !== post.id)
+    .slice(0, 3)
 
   return (
     <div className="min-h-screen">
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateJsonLd(post)) }}
-      />
-
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4">
@@ -214,22 +137,7 @@ export default async function BlogPostPage({
             <p className="text-sm text-muted-foreground">
               Found this interesting? Share it with others.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: post.title,
-                    text: post.excerpt,
-                    url: window.location.href,
-                  })
-                } else {
-                  navigator.clipboard.writeText(window.location.href)
-                  alert('Link copied to clipboard!')
-                }
-              }}
-            >
+            <Button variant="outline" size="sm">
               <Share2 data-icon="inline-start" />
               Share
             </Button>

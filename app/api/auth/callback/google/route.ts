@@ -8,13 +8,13 @@ export async function GET(request: NextRequest) {
   
   if (error) {
     return NextResponse.redirect(
-      new URL(`/admin/settings?error=${encodeURIComponent(error)}`, request.nextUrl.origin)
+      new URL(`/admin/settings?error=${encodeURIComponent(error)}`, request.url)
     )
   }
   
   if (!code) {
     return NextResponse.redirect(
-      new URL('/admin/settings?error=No authorization code', request.nextUrl.origin)
+      new URL('/admin/settings?error=No authorization code', request.url)
     )
   }
   
@@ -49,12 +49,12 @@ export async function GET(request: NextRequest) {
     })
     
     return NextResponse.redirect(
-      new URL('/admin/settings?success=blogger_connected', request.nextUrl.origin)
+      new URL('/admin/settings?success=blogger_connected', request.url)
     )
   } catch (err) {
     console.error('OAuth error:', err)
     return NextResponse.redirect(
-      new URL('/admin/settings?error=Failed to connect Blogger', request.nextUrl.origin)
+      new URL('/admin/settings?error=Failed to connect Blogger', request.url)
     )
   }
 }

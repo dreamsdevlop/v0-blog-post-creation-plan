@@ -14,13 +14,3 @@ node_modules
 .next/
 .DS_Store
 .env
-
-# App data (persisted storage)
-/data/
-
-# Local env files
-.env.local
-.env.*.local
-
-# Env vars reference (contains sensitive examples)
-vercel-env-vars.json

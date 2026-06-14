@@ -8,39 +8,23 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Save, ExternalLink, CheckCircle, XCircle, Loader2, Clock } from 'lucide-react'
+import { Save, ExternalLink, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [bloggerStatus, setBloggerStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
-  const [isSaving, setIsSaving] = useState(false)
   const [settings, setSettings] = useState({
     blogName: 'Dark Chronicles',
     blogDescription: 'History, Mystery & Hidden Truths',
     adsenseId: '',
     amazonAffiliateId: '',
     autoPublish: false,
-    autoFetchTranscript: true,
     defaultModel: 'deepseek',
-    publishTime: '09:00',
-    timezone: 'UTC',
   })
 
-  const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings }),
-      })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (error) {
-      console.error('Failed to save settings:', error)
-    } finally {
-      setIsSaving(false)
-    }
+  const handleSave = () => {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
   }
 
   // Check Blogger connection status
@@ -230,40 +214,6 @@ export default function SettingsPage() {
 
             <Separator />
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Auto-Fetch Transcripts</p>
-                <p className="text-sm text-muted-foreground">
-                  Automatically fetch transcripts when importing videos
-                </p>
-              </div>
-              <Button
-                variant={settings.autoFetchTranscript ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSettings({ ...settings, autoFetchTranscript: !settings.autoFetchTranscript })}
-              >
-                {settings.autoFetchTranscript ? 'Enabled' : 'Disabled'}
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-3">
-              <h4 className="font-medium">Publish Schedule</h4>
-              <div className="flex items-center gap-2">
-                <Clock className="size-4 text-muted-foreground" />
-                <Input
-                  type="time"
-                  value={settings.publishTime}
-                  onChange={(e) => setSettings({ ...settings, publishTime: e.target.value })}
-                  className="w-32"
-                />
-                <span className="text-sm text-muted-foreground">Daily publish time</span>
-              </div>
-            </div>
-
-            <Separator />
-
             <div className="space-y-3">
               <h4 className="font-medium">Zapier Integration</h4>
               <p className="text-sm text-muted-foreground">
@@ -310,18 +260,9 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save data-icon="inline-start" />
-              Save Settings
-            </>
-          )}
+        <Button onClick={handleSave}>
+          <Save data-icon="inline-start" />
+          Save Settings
         </Button>
       </div>
     </div>

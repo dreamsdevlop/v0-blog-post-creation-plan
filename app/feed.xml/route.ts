@@ -1,9 +1,9 @@
-import { getPublishedPosts } from '@/lib/data'
+import { getAllPosts } from '@/lib/data'
 
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com'
-  const posts = await getPublishedPosts()
-
+  const posts = getAllPosts().filter(post => post.status === 'published')
+  
   const rssItems = posts.map(post => `
     <item>
       <title><![CDATA[${post.title}]]></title>
@@ -18,7 +18,7 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Dark Chronicles - History, Mystery & Hidden Truths</title>
+    <title>Dark Chronicles - History, Mystery &amp; Hidden Truths</title>
     <link>${baseUrl}</link>
     <description>Revealing the dark secrets of history, mysterious cults, and hidden truths the world forgot.</description>
     <language>en-us</language>

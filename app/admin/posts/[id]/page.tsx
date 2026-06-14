@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Save, ArrowLeft, Eye, Trash2, CheckCircle, Loader2 } from 'lucide-react'
+import { Save, ArrowLeft, Eye, Trash2, CircleCheck as CheckCircle, Loader as Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import type { BlogPost } from '@/lib/types'
 
@@ -23,7 +23,6 @@ export default function EditPostPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [activeTab, setActiveTab] = useState('edit')
 
   useEffect(() => {
     fetch(`/api/posts?id=${id}`)
@@ -135,152 +134,127 @@ export default function EditPostPage() {
         </Alert>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="edit" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Content</CardTitle>
-                  <CardDescription>Edit the main content of your post</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Title</label>
-                    <Input
-                      value={post.title}
-                      onChange={(e) => setPost({ ...post, title: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Slug</label>
-                    <Input
-                      value={post.slug}
-                      onChange={(e) => setPost({ ...post, slug: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Excerpt</label>
-                    <Textarea
-                      value={post.excerpt}
-                      onChange={(e) => setPost({ ...post, excerpt: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Content (HTML)</label>
-                    <Textarea
-                      value={post.content}
-                      onChange={(e) => setPost({ ...post, content: e.target.value })}
-                      rows={16}
-                      className="font-mono text-xs"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>SEO</CardTitle>
-                  <CardDescription>Search engine optimization settings</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">SEO Title</label>
-                    <Input
-                      value={post.seoTitle || ''}
-                      onChange={(e) => setPost({ ...post, seoTitle: e.target.value })}
-                      placeholder={post.title}
-                    />
-                    <p className="text-xs text-muted-foreground">{(post.seoTitle || post.title).length}/60 characters</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Meta Description</label>
-                    <Textarea
-                      value={post.seoDescription || ''}
-                      onChange={(e) => setPost({ ...post, seoDescription: e.target.value })}
-                      placeholder={post.excerpt}
-                      rows={3}
-                    />
-                    <p className="text-xs text-muted-foreground">{(post.seoDescription || post.excerpt).length}/155 characters</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tags (comma-separated)</label>
-                    <Input
-                      value={post.tags.join(', ')}
-                      onChange={(e) => setPost({ ...post, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Thumbnail URL</label>
-                    <Input
-                      value={post.thumbnail}
-                      onChange={(e) => setPost({ ...post, thumbnail: e.target.value })}
-                    />
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>AI Model: {post.aiModel}</p>
-                    <p>Views: {post.views.toLocaleString()}</p>
-                    <p>Created: {new Date(post.createdAt).toLocaleDateString()}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6 space-y-3">
-                  <Button onClick={handleSave} className="w-full" disabled={isSaving}>
-                    {isSaving ? (
-                      <Loader2 className="animate-spin" data-icon="inline-start" />
-                    ) : (
-                      <Save data-icon="inline-start" />
-                    )}
-                    Save Changes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full text-destructive"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 data-icon="inline-start" />
-                    Delete Post
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="preview">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Preview</CardTitle>
-              <CardDescription>How your post will look to readers</CardDescription>
+              <CardTitle>Content</CardTitle>
+              <CardDescription>Edit the main content of your post</CardDescription>
             </CardHeader>
-            <CardContent>
-              <article className="prose prose-neutral dark:prose-invert max-w-none">
-                <h1>{post.title}</h1>
-                <p className="text-muted-foreground">{post.excerpt}</p>
-                <div dangerouslySetInnerHTML={{ __html: post.content }} />
-              </article>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Title</label>
+                <Input
+                  value={post.title}
+                  onChange={(e) => setPost({ ...post, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Slug</label>
+                <Input
+                  value={post.slug}
+                  onChange={(e) => setPost({ ...post, slug: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Excerpt</label>
+                <Textarea
+                  value={post.excerpt}
+                  onChange={(e) => setPost({ ...post, excerpt: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Content (HTML)</label>
+                <Textarea
+                  value={post.content}
+                  onChange={(e) => setPost({ ...post, content: e.target.value })}
+                  rows={16}
+                  className="font-mono text-xs"
+                />
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>SEO</CardTitle>
+              <CardDescription>Search engine optimization settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">SEO Title</label>
+                <Input
+                  value={post.seoTitle || ''}
+                  onChange={(e) => setPost({ ...post, seoTitle: e.target.value })}
+                  placeholder={post.title}
+                />
+                <p className="text-xs text-muted-foreground">{(post.seoTitle || post.title).length}/60 characters</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Meta Description</label>
+                <Textarea
+                  value={post.seoDescription || ''}
+                  onChange={(e) => setPost({ ...post, seoDescription: e.target.value })}
+                  placeholder={post.excerpt}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">{(post.seoDescription || post.excerpt).length}/155 characters</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tags (comma-separated)</label>
+                <Input
+                  value={post.tags.join(', ')}
+                  onChange={(e) => setPost({ ...post, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Thumbnail URL</label>
+                <Input
+                  value={post.thumbnail}
+                  onChange={(e) => setPost({ ...post, thumbnail: e.target.value })}
+                />
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>AI Model: {post.aiModel}</p>
+                <p>Views: {post.views.toLocaleString()}</p>
+                <p>Created: {new Date(post.createdAt).toLocaleDateString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <Button onClick={handleSave} className="w-full" disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="animate-spin" data-icon="inline-start" />
+                ) : (
+                  <Save data-icon="inline-start" />
+                )}
+                Save Changes
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full text-destructive"
+                onClick={handleDelete}
+              >
+                <Trash2 data-icon="inline-start" />
+                Delete Post
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
