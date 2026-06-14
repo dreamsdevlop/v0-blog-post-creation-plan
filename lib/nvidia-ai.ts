@@ -5,13 +5,21 @@ const NVIDIA_API_KEYS = [
   process.env.NVIDIA_API_KEY_2,
   process.env.NVIDIA_API_KEY_3,
   process.env.NVIDIA_API_KEY_4,
-]
+  process.env.NVIDIA_API_KEY_5,
+  process.env.NVIDIA_API_KEY_6,
+  process.env.NVIDIA_API_KEY_7,
+  process.env.NVIDIA_API_KEY_8,
+  process.env.NVIDIA_API_KEY_9,
+].filter((key): key is string => Boolean(key))
 
 const MODEL_ENDPOINTS: Record<string, string> = {
   deepseek: 'https://integrate.api.nvidia.com/v1/chat/completions',
   kimi: 'https://integrate.api.nvidia.com/v1/chat/completions',
   glm: 'https://integrate.api.nvidia.com/v1/chat/completions',
   stepfun: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  flux: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  sd: 'https://integrate.api.nvidia.com/v1/chat/completions',
+  llama: 'https://integrate.api.nvidia.com/v1/chat/completions',
 }
 
 const MODEL_IDS: Record<string, string> = {
@@ -19,12 +27,26 @@ const MODEL_IDS: Record<string, string> = {
   kimi: 'moonshot-ai/kimi-k2-instruct',
   glm: 'thudm/glm-4',
   stepfun: 'stepfun-ai/step-2-16k',
+  flux: 'black-forest-labs/flux-schnell',
+  sd: 'stabilityai/stable-diffusion-3.5-large',
+  llama: 'meta/llama-3.1-405b-instruct',
 }
 
-function getApiKey(modelIndex: number): string {
-  const key = NVIDIA_API_KEYS[modelIndex % NVIDIA_API_KEYS.length]
+const MODEL_KEY_MAP: Record<string, number> = {
+  deepseek: 0,  // NVIDIA_API_KEY_1
+  kimi: 1,      // NVIDIA_API_KEY_2
+  glm: 2,       // NVIDIA_API_KEY_3
+  stepfun: 3,   // NVIDIA_API_KEY_4
+  flux: 4,      // NVIDIA_API_KEY_5
+  sd: 5,        // NVIDIA_API_KEY_6
+  llama: 6,     // NVIDIA_API_KEY_7
+}
+
+function getApiKey(model: string): string {
+  const index = MODEL_KEY_MAP[model] ?? 0
+  const key = NVIDIA_API_KEYS[index]
   if (!key) {
-    throw new Error('NVIDIA API key not configured')
+    throw new Error(`NVIDIA API key not configured for model: ${model}`)
   }
   return key
 }
@@ -53,8 +75,7 @@ export async function generateBlogPost(
   videoTitle: string,
   settings: GenerationSettings
 ): Promise<{ title: string; content: string; excerpt: string; seoTitle: string; seoDescription: string; tags: string[] }> {
-  const modelIndex = ['deepseek', 'kimi', 'glm', 'stepfun'].indexOf(settings.model)
-  const apiKey = getApiKey(modelIndex)
+  const apiKey = getApiKey(settings.model)
   const modelId = MODEL_IDS[settings.model]
   const endpoint = MODEL_ENDPOINTS[settings.model]
 
@@ -159,8 +180,7 @@ export async function improveContent(
   instruction: string,
   model: GenerationSettings['model'] = 'deepseek'
 ): Promise<string> {
-  const modelIndex = ['deepseek', 'kimi', 'glm', 'stepfun'].indexOf(model)
-  const apiKey = getApiKey(modelIndex)
+  const apiKey = getApiKey(model)
   const modelId = MODEL_IDS[model]
   const endpoint = MODEL_ENDPOINTS[model]
 

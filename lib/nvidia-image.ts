@@ -19,10 +19,10 @@ interface ImageGenerationOptions {
 }
 
 const NVIDIA_IMAGE_API_KEYS = [
-  process.env.NVIDIA_IMAGE_API_KEY,
-  process.env.NVIDIA_IMAGE_API_KEY_2,
-  process.env.NVIDIA_IMAGE_API_KEY_3,
-  process.env.NVIDIA_IMAGE_API_KEY_4,
+  process.env.NVIDIA_IMAGE_API_KEY,  // Llama
+  process.env.NVIDIA_IMAGE_API_KEY_2,  // Flux image generation
+  process.env.NVIDIA_IMAGE_API_KEY_3,  // stable-diffusion-3.5-large
+  process.env.NVIDIA_IMAGE_API_KEY_4,  // Flux 2
 ].filter((key): key is string => Boolean(key))
 
 let imageKeyIndex = 0
