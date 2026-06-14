@@ -12,6 +12,7 @@ import { Save, ExternalLink, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [bloggerStatus, setBloggerStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [settings, setSettings] = useState({
     blogName: 'Dark Chronicles',
@@ -19,12 +20,29 @@ export default function SettingsPage() {
     adsenseId: '',
     amazonAffiliateId: '',
     autoPublish: false,
+    autoFetchTranscript: true,
     defaultModel: 'deepseek',
+    contentModel: 'deepseek',
+    imageStyle: 'auto',
+    publishTime: '09:00',
+    timezone: 'UTC',
   })
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Check Blogger connection status
@@ -138,6 +156,46 @@ export default function SettingsPage() {
                   </Button>
                 ))}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Content Generation Model</label>
+              <div className="flex flex-wrap gap-2">
+                {['deepseek', 'kimi', 'glm', 'stepfun'].map((model) => (
+                  <Button
+                    key={model}
+                    variant={settings.contentModel === model ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSettings({ ...settings, contentModel: model })}
+                  >
+                    {model.charAt(0).toUpperCase() + model.slice(1)}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Used for automated blog post generation</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Featured Image Style</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'auto', label: 'Auto' },
+                  { id: 'cinematic', label: 'Cinematic' },
+                  { id: 'dark_artistic', label: 'Dark Artistic' },
+                  { id: 'noir_mystery', label: 'Noir Mystery' },
+                  { id: 'historical_realistic', label: 'Historical' },
+                ].map((style) => (
+                  <Button
+                    key={style.id}
+                    variant={settings.imageStyle === style.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSettings({ ...settings, imageStyle: style.id })}
+                  >
+                    {style.label}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Style used for AI-generated featured images</p>
             </div>
           </CardContent>
         </Card>
